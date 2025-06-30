@@ -63,11 +63,24 @@ export const updateSubmissionStatus: RequestHandler = async (req, res) => {
 
     // Admins can update any submission
     if (user?.role === 'admin') {
+      // Validate status value if present
+      const allowedStatuses = ['pending', 'approved', 'rejected'];
+      if (status && !allowedStatuses.includes(status)) {
+        console.log('Invalid status value received:', status);
+        res.status(400).json({ message: 'Invalid status value' });
+        return;
+      }
+      // Build update object
+      const updateObj: any = { ...rest };
+      if (status) updateObj.status = status;
+      if (rejectionReason !== undefined) updateObj.rejectionReason = rejectionReason;
+      console.log('PATCH admin:', { id, updateObj });
       const updated = await Submission.findByIdAndUpdate(
         id,
-        { status, rejectionReason, ...rest },
+        updateObj,
         { new: true }
       );
+      console.log('Updated submission:', updated);
       res.json(updated);
       return;
     }
