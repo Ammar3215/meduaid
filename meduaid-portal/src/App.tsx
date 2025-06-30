@@ -14,8 +14,13 @@ import QuestionReview from './pages/QuestionReview'
 import AllSubmissions from './pages/AllSubmissions'
 import Settings from './pages/Settings'
 import AllAdminSubmissions from './pages/AllAdminSubmissions'
+import { useAuth } from './context/AuthContext'
 
 function App() {
+  const { loading } = useAuth();
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen text-2xl text-primary">Loading...</div>;
+  }
   return (
     <div className="min-h-screen w-full flex flex-col">
       <Routes>
