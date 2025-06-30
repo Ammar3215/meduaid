@@ -4,13 +4,19 @@ import Submission from '../models/Submission';
 // Writer submits a question
 export const createSubmission: RequestHandler = async (req, res) => {
   try {
-    const { category, subject, topic } = req.body;
+    const { category, subject, topic, question, choices, explanations, reference, difficulty, images } = req.body;
     const writerId = (req as any).user?.id;
     const submission = await Submission.create({
       writer: writerId,
       category,
       subject,
       topic,
+      question,
+      choices,
+      explanations,
+      reference,
+      difficulty,
+      images: images || [],
       status: 'pending',
     });
     res.status(201).json(submission);
@@ -45,17 +51,59 @@ export const getSubmissions: RequestHandler = async (req, res) => {
 export const updateSubmissionStatus: RequestHandler = async (req, res) => {
   try {
     const user = (req as any).user;
-    if (user?.role !== 'admin') {
-      res.status(403).json({ message: 'Forbidden' });
+    const { id } = req.params;
+    const { status, rejectionReason, ...rest } = req.body;
+
+    // Find the submission
+    const submission = await Submission.findById(id);
+    if (!submission) {
+      res.status(404).json({ message: 'Submission not found' });
       return;
     }
+
+    // Admins can update any submission
+    if (user?.role === 'admin') {
+      const updated = await Submission.findByIdAndUpdate(
+        id,
+        { status, rejectionReason, ...rest },
+        { new: true }
+      );
+      res.json(updated);
+      return;
+    }
+
+    // Writers can only update their own rejected submissions (to resubmit)
+    if (
+      user?.role === 'writer' &&
+      submission.writer.toString() === user.id &&
+      submission.status === 'rejected'
+    ) {
+      // Only allow updating question fields and set status to 'pending'
+      const allowedFields: any = {
+        status: 'pending',
+        rejectionReason: '',
+      };
+      if (rest.question !== undefined) allowedFields.question = rest.question;
+      if (rest.choices !== undefined) allowedFields.choices = rest.choices;
+      if (rest.explanations !== undefined) allowedFields.explanations = rest.explanations;
+      if (rest.reference !== undefined) allowedFields.reference = rest.reference;
+      if (rest.difficulty !== undefined) allowedFields.difficulty = rest.difficulty;
+      const updated = await Submission.findByIdAndUpdate(id, allowedFields, { new: true });
+      res.json(updated);
+      return;
+    }
+
+    res.status(403).json({ message: 'Forbidden' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Get a single submission by ID
+export const getSubmissionById: RequestHandler = async (req, res) => {
+  try {
     const { id } = req.params;
-    const { status, rejectionReason } = req.body;
-    const submission = await Submission.findByIdAndUpdate(
-      id,
-      { status, rejectionReason },
-      { new: true }
-    );
+    const submission = await Submission.findById(id).populate('writer', 'name email');
     if (!submission) {
       res.status(404).json({ message: 'Submission not found' });
       return;
