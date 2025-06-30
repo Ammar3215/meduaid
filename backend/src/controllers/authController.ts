@@ -58,7 +58,17 @@ export const login: RequestHandler = async (req, res) => {
       return;
     }
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
-    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role, verified: user.verified } });
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isAdmin: user.role === 'admin',
+        isVerified: user.verified,
+      }
+    });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
