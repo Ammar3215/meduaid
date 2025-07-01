@@ -4,7 +4,7 @@ import Submission from '../models/Submission';
 // Writer submits a question
 export const createSubmission: RequestHandler = async (req, res) => {
   try {
-    const { category, subject, topic, question, choices, explanations, reference, difficulty, images } = req.body;
+    const { category, subject, topic, question, choices, explanations, reference, difficulty, images, status } = req.body;
     const writerId = (req as any).user?.id;
     const submission = await Submission.create({
       writer: writerId,
@@ -17,7 +17,7 @@ export const createSubmission: RequestHandler = async (req, res) => {
       reference,
       difficulty,
       images: images || [],
-      status: 'pending',
+      status: status === 'draft' ? 'draft' : 'pending',
     });
     res.status(201).json(submission);
   } catch (err) {
@@ -33,13 +33,31 @@ export const getSubmissions: RequestHandler = async (req, res) => {
     const user = (req as any).user;
     if (user?.role === 'writer') {
       filter.writer = user.id;
-    } else if (writer) {
-      filter.writer = writer;
+      if (status) {
+        // Support comma-separated status (e.g., 'rejected,draft')
+        const statusArr = String(status).split(',');
+        filter.status = { $in: statusArr };
+      }
+    } else if (user?.role === 'admin') {
+      if (status) {
+        // Only show drafts if explicitly requested
+        const statusArr = String(status).split(',');
+        if (!statusArr.includes('draft')) {
+          filter.status = { $in: statusArr.filter(s => s !== 'draft') };
+        } else {
+          filter.status = { $in: statusArr };
+        }
+      } else {
+        // By default, exclude drafts for admin
+        filter.status = { $ne: 'draft' };
+      }
+      if (writer) {
+        filter.writer = writer;
+      }
     }
     if (category) filter.category = category;
     if (subject) filter.subject = subject;
     if (topic) filter.topic = topic;
-    if (status) filter.status = status;
     const submissions = await Submission.find(filter).populate('writer', 'name email');
     res.json(submissions);
   } catch (err) {
@@ -85,17 +103,20 @@ export const updateSubmissionStatus: RequestHandler = async (req, res) => {
       return;
     }
 
-    // Writers can only update their own rejected submissions (to resubmit)
+    // Writers can update their own rejected or draft submissions
     if (
       user?.role === 'writer' &&
       submission.writer.toString() === user.id &&
-      submission.status === 'rejected'
+      (submission.status === 'rejected' || submission.status === 'draft')
     ) {
-      // Only allow updating question fields and set status to 'pending'
-      const allowedFields: any = {
-        status: 'pending',
-        rejectionReason: '',
-      };
+      let allowedFields: any = {};
+      if (submission.status === 'rejected') {
+        allowedFields.status = 'pending';
+        allowedFields.rejectionReason = '';
+      } else if (submission.status === 'draft') {
+        // Allow status to be set to 'pending' (submit) or remain 'draft' (save as draft)
+        allowedFields.status = status === 'pending' ? 'pending' : 'draft';
+      }
       if (rest.question !== undefined) allowedFields.question = rest.question;
       if (rest.choices !== undefined) allowedFields.choices = rest.choices;
       if (rest.explanations !== undefined) allowedFields.explanations = rest.explanations;

@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { subjectsStructure } from '../utils/subjectsStructure';
 
@@ -16,18 +15,33 @@ const COLORS = [
   '#FFD600', // yellow
 ];
 
-// Add Writer type
-interface Writer {
-  _id: string;
-  name: string;
-  email: string;
-}
+const AnimatedCounter = ({ value, className = '' }: { value: number, className?: string }) => {
+  const [display, setDisplay] = useState(0);
+  const ref = useRef<number>(0);
+  useEffect(() => {
+    let start = ref.current;
+    let startTime: number | null = null;
+    const duration = 800;
+    const step = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      setDisplay(Math.floor(start + (value - start) * progress));
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else {
+        setDisplay(value);
+        ref.current = value;
+      }
+    };
+    requestAnimationFrame(step);
+    // eslint-disable-next-line
+  }, [value]);
+  return <div className={className}>{display.toLocaleString()}</div>;
+};
 
 const AdminDashboard: React.FC = () => {
   const { jwt } = useAuth();
   const [stats, setStats] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [penalties, setPenalties] = useState<any[]>([]);
   const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -35,20 +49,38 @@ const AdminDashboard: React.FC = () => {
   const [modalError, setModalError] = useState('');
   const [fullImage, setFullImage] = useState<string | null>(null);
 
-  // --- Independent filter state for each card ---
+  // Prepare data for dropdowns
+  const allSubmissions = stats?.allSubmissions || [];
+
   // Card 1: Writer
   const [writerFilter, setWriterFilter] = useState('All');
+
   // Card 2: Subject
   const categories = Object.keys(subjectsStructure);
-  const [subjectCategoryFilter, setSubjectCategoryFilter] = useState(categories[0]);
-  const subjectsForSubjectCard = Object.keys((subjectsStructure as Record<string, any>)[subjectCategoryFilter] || {});
+  const [subjectCategoryFilter, setSubjectCategoryFilter] = useState('All');
   const [subjectFilter, setSubjectFilter] = useState('All');
+  const subjectsForSubjectCard = subjectCategoryFilter === 'All'
+    ? Array.from(new Set(allSubmissions.map((q: any) => q.subject).filter(Boolean)))
+    : Object.keys((subjectsStructure as Record<string, any>)[subjectCategoryFilter] || {});
+
   // Card 3: Topic
-  const [topicCategoryFilter, setTopicCategoryFilter] = useState(categories[0]);
-  const subjectsForTopicCard = Object.keys((subjectsStructure as Record<string, any>)[topicCategoryFilter] || {});
+  const [topicCategoryFilter, setTopicCategoryFilter] = useState('All');
   const [topicSubjectFilter, setTopicSubjectFilter] = useState('All');
-  // Topics for topic card are computed below
   const [topicFilter, setTopicFilter] = useState('All');
+  const subjectsForTopicCard = topicCategoryFilter === 'All'
+    ? Array.from(new Set(allSubmissions.map((q: any) => q.subject).filter(Boolean)))
+    : Object.keys((subjectsStructure as Record<string, any>)[topicCategoryFilter] || {});
+  // Topics for topic card are computed below
+  const topicsWithQuestionsArr = (topicSubjectFilter === 'All'
+    ? (topicCategoryFilter === 'All'
+        ? allSubmissions
+        : allSubmissions.filter((q: any) => q.category === topicCategoryFilter))
+    : (topicCategoryFilter === 'All'
+        ? allSubmissions.filter((q: any) => q.subject === topicSubjectFilter)
+        : allSubmissions.filter((q: any) => q.category === topicCategoryFilter && q.subject === topicSubjectFilter)))
+    .map((q: any) => q.topic)
+    .filter(Boolean);
+  const uniqueTopics = Array.from(new Set(topicsWithQuestionsArr));
 
   // Add state for editing and saving
   const [isEditing, setIsEditing] = useState(false);
@@ -56,27 +88,18 @@ const AdminDashboard: React.FC = () => {
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
 
-  const [allWritersList, setAllWritersList] = useState<Writer[]>([]);
-
   useEffect(() => {
     const fetchStats = async () => {
-      setLoading(true);
-      setError('');
       try {
         const response = await fetch('http://localhost:5050/api/admin/stats', {
           headers: { Authorization: `Bearer ${jwt}` },
         });
         if (!response.ok) {
-          setError('Failed to fetch stats');
-          setLoading(false);
           return;
         }
         const data = await response.json();
         setStats(data);
-      } catch {
-        setError('Network error');
-      }
-      setLoading(false);
+      } catch {}
     };
     const fetchPenalties = async () => {
       try {
@@ -89,27 +112,12 @@ const AdminDashboard: React.FC = () => {
         }
       } catch {}
     };
-    // Fetch all writers for the filter
-    const fetchWriters = async () => {
-      try {
-        const res = await fetch('http://localhost:5050/api/admin/writers', {
-          headers: { Authorization: `Bearer ${jwt}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setAllWritersList(data);
-        }
-      } catch {}
-    };
     if (jwt) {
       fetchStats();
       fetchPenalties();
-      fetchWriters();
     }
   }, [jwt]);
 
-  // Prepare data for dropdowns
-  const allSubmissions = stats?.recentSubmissions || [];
   // --- Card 1: Pie chart by writer ---
   // Only show writers who have submissions in the current data for the chart
   const writersWithSubmissions = Array.from(new Set(allSubmissions.map((q: any) => q.writer?.name).filter(Boolean)));
@@ -121,20 +129,9 @@ const AdminDashboard: React.FC = () => {
   const filteredWriterPieData = writerFilter === 'All'
     ? writerPieDataRaw
     : writerPieDataRaw.filter((d) => d.name === writerFilter);
-  const isEmptyWriterPie = !Array.isArray(filteredWriterPieData) || filteredWriterPieData.length === 0 || filteredWriterPieData.every((d: any) => d.value === 0);
 
   // --- Card 2: Pie chart by subject ---
   const filteredBySubjectCategory = subjectCategoryFilter === 'All' ? allSubmissions : allSubmissions.filter((q: any) => q.category === subjectCategoryFilter);
-  const subjectsForSubjectPie = Array.from(new Set(filteredBySubjectCategory.map((q: any) => q.subject).filter(Boolean)));
-  const subjectPieDataRaw = subjectsForSubjectPie.map((subject, idx) => ({
-    name: subject,
-    value: filteredBySubjectCategory.filter((q: any) => q.subject === subject).length,
-    color: COLORS[idx % COLORS.length],
-  }));
-  const subjectPieData = subjectFilter === 'All'
-    ? subjectPieDataRaw
-    : subjectPieDataRaw.filter((d) => d.name === subjectFilter);
-  const isEmptySubjectPie = !Array.isArray(subjectPieData) || subjectPieData.length === 0 || subjectPieData.every((d: any) => d.value === 0);
 
   // --- Card 3: Pie chart by topic ---
   const filteredByTopicCategory = topicCategoryFilter === 'All' ? allSubmissions : allSubmissions.filter((q: any) => q.category === topicCategoryFilter);
@@ -152,7 +149,6 @@ const AdminDashboard: React.FC = () => {
   if (topicFilter !== 'All') {
     topicPieData = topicPieData.filter((d) => d.name === topicFilter);
   }
-  const isEmptyTopicPie = !Array.isArray(topicPieData) || topicPieData.length === 0;
 
   // Handle View button click
   const handleViewClick = async (id: string) => {
@@ -216,10 +212,10 @@ const AdminDashboard: React.FC = () => {
       // Update the dashboard table immediately
       setStats((prev: any) => {
         if (!prev) return prev;
-        const updatedSubmissions = prev.recentSubmissions.map((q: any) =>
+        const updatedSubmissions = prev.allSubmissions.map((q: any) =>
           q._id === updated._id ? { ...q, ...updated } : q
         );
-        return { ...prev, recentSubmissions: updatedSubmissions };
+        return { ...prev, allSubmissions: updatedSubmissions };
       });
     } catch (err) {
       setEditError('Network error.');
@@ -231,199 +227,183 @@ const AdminDashboard: React.FC = () => {
     <div className="w-full">
       {/* Add spacing between menu and cards */}
       <div className="mb-6" />
-      {loading ? (
-        // Skeleton loader for cards
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 w-full animate-pulse">
-          {[1,2,3].map(i => (
-            <div key={i} className="bg-white rounded-xl shadow-lg flex flex-col items-center w-full min-h-[400px] p-8">
-              <div className="h-8 w-2/3 bg-gray-200 rounded mb-6"></div>
-              <div className="h-48 w-full bg-gray-100 rounded mb-4"></div>
-              <div className="h-6 w-1/2 bg-gray-200 rounded"></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 w-full max-w-[1400px] mx-auto" style={{gridAutoRows: '1fr'}}>
+        {/* Card 1: Total Questions by Writer (Dropdowns Above Counter, Compact Height, No Details) */}
+        <div className="relative rounded-2xl shadow-2xl overflow-hidden group transition-all duration-300 flex flex-col items-stretch justify-start h-full" style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', boxShadow: '0 12px 40px rgba(0,0,0,0.12)', border: '1.5px solid #e3e6f0', minHeight: '320px'}}>
+          <div className="absolute left-0 top-0 h-full w-2 bg-[#4B47B6]" />
+          <div className="absolute inset-0 backdrop-blur-lg bg-[#f5f6fa]/95" />
+          <div className="relative z-10 p-8 flex flex-col items-center justify-start w-full h-full">
+            {/* Card Header */}
+            <div className="flex items-center mb-6 w-full justify-center">
+              <span className="inline-block w-2 h-6 rounded-full mr-3" style={{background: '#4B47B6'}}></span>
+              <h2 className="text-2xl font-bold text-[#2d3748] tracking-tight">Total Questions by Writer</h2>
             </div>
-          ))}
-        </div>
-      ) : error ? (
-        <div className="flex justify-center items-center min-h-[200px] text-center text-red-500">{error}</div>
-      ) : stats ? (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 w-full min-h-[420px]">
-            {/* Card 1: Pie chart by writer */}
-            <div className="bg-white rounded-xl shadow-lg flex flex-col items-stretch w-full min-h-[400px] transition hover:shadow-xl border-t-8 border-primary group">
-              <div className="px-6 pt-6 pb-2 border-b border-gray-100">
-                <div className="text-xl font-bold text-primary mb-1 tracking-tight">Total Questions by Writer</div>
-              </div>
-              <div className="flex flex-row flex-wrap justify-center items-center gap-2 mt-4 mb-4 px-6">
-                <label className="font-semibold text-sm text-gray-700">Writer:</label>
+            <div className="flex flex-col items-center justify-center w-full">
+              {/* Dropdown Filter (Writer) */}
+              <div className="flex flex-col items-center mb-6 w-full max-w-xs animate-fade-in">
+                <label className="text-xs text-gray-700 mb-1 self-start">Writer</label>
+                <div className="relative w-full">
                 <select
-                  className="w-32 md:w-40 border border-gray-300 rounded px-2 py-1 text-gray-800 focus:ring-2 focus:ring-primary focus:border-primary transition"
+                    className="appearance-none w-full px-4 py-2 rounded-lg border border-[#4B47B6] text-[#4B47B6] font-semibold focus:ring-2 focus:ring-[#4B47B6] focus:border-[#4B47B6] transition bg-white/90 shadow-sm hover:border-[#4B47B6] hover:shadow-md"
                   value={writerFilter}
                   onChange={e => setWriterFilter(e.target.value)}
+                    style={{paddingRight: '2.5rem'}}
                 >
                   <option value="All">All</option>
-                  {allWritersList.map((writer) => (
-                    <option key={writer._id} value={writer.name}>{writer.name} ({writer.email})</option>
+                    {Array.from(new Set(allSubmissions.map((q: any) => q.writer?.name).filter(Boolean))).map((name) => (
+                      <option key={name as string} value={name as string}>{name as string}</option>
                   ))}
                 </select>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#4B47B6]">
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="#4B47B6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </span>
               </div>
-              <div className="flex-1 flex flex-col justify-center items-center px-6 pb-6">
-                {isEmptyWriterPie ? (
-                  <div className="flex justify-center items-center min-h-[200px] text-center text-gray-300">No data available for the selected filter.</div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={220}>
-                    <PieChart>
-                      <Pie
-                        data={filteredWriterPieData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        label={({ percent = 0 }) => (
-                          <span className="text-xs font-bold text-gray-700">{`${(percent * 100).toFixed(0)}%`}</span>
-                        )}
-                      >
-                        {filteredWriterPieData.map((entry: any, index: number) => (
-                          <Cell key={`cell-writer-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip contentStyle={{ fontSize: 14, fontWeight: 500 }} />
-                      <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: 14, marginTop: 16 }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
               </div>
+              {/* Animated Counter */}
+              <AnimatedCounter value={filteredWriterPieData.reduce((sum: number, item: any) => sum + item.value, 0)} className="text-6xl font-extrabold text-[#4B47B6] mb-2 transition-all duration-500" />
+              <span className="mt-1 mb-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold flex items-center animate-fade-in">
+                ↑ 5% this week
+              </span>
             </div>
-            {/* Card 2: Pie chart by subject */}
-            <div className="bg-white rounded-xl shadow-lg flex flex-col items-stretch w-full min-h-[400px] transition hover:shadow-xl border-t-8 border-accent group">
-              <div className="px-6 pt-6 pb-2 border-b border-gray-100">
-                <div className="text-xl font-bold text-accent mb-1 tracking-tight">Questions by Subject</div>
+          </div>
+        </div>
+        {/* Card 2: Questions by Subject (Dropdowns Above Counter, Compact Height, No Details) */}
+        <div className="relative rounded-2xl shadow-2xl overflow-hidden group transition-all duration-300 flex flex-col items-stretch justify-start h-full" style={{background: 'linear-gradient(135deg, #06d6a0 0%, #90ee90 100%)', boxShadow: '0 12px 40px rgba(0,0,0,0.12)', border: '1.5px solid #e3e6f0', minHeight: '320px'}}>
+          <div className="absolute left-0 top-0 h-full w-2 bg-[#06d6a0]" />
+          <div className="absolute inset-0 backdrop-blur-lg bg-[#f5f6fa]/95" />
+          <div className="relative z-10 p-8 flex flex-col items-center justify-start w-full h-full">
+            {/* Card Header */}
+            <div className="flex items-center mb-6 w-full justify-center">
+              <span className="inline-block w-2 h-6 rounded-full mr-3" style={{background: '#06d6a0'}}></span>
+              <h2 className="text-2xl font-bold text-[#2d3748] tracking-tight">Questions by Subject</h2>
               </div>
-              <div className="flex flex-row flex-wrap justify-center items-center gap-2 mt-4 mb-4 px-6">
-                <label className="font-semibold text-sm text-gray-700">Category:</label>
+            <div className="flex flex-col items-center justify-center w-full">
+              {/* Dropdown Filters (Category, Subject) */}
+              <div className="flex flex-wrap justify-center gap-4 mb-6 w-full max-w-2xl animate-fade-in">
+                <div className="flex flex-col items-center w-1/2 min-w-[160px]">
+                  <label className="text-xs text-gray-700 mb-1 self-start">Category</label>
+                  <div className="relative w-full">
                 <select
-                  className="w-32 md:w-40 border border-gray-300 rounded px-2 py-1 text-gray-800 focus:ring-2 focus:ring-accent focus:border-accent transition"
+                      className="appearance-none w-full px-4 py-2 rounded-lg border border-[#06d6a0] text-[#06d6a0] font-semibold focus:ring-2 focus:ring-[#06d6a0] focus:border-[#06d6a0] transition bg-white/90 shadow-sm hover:border-[#06d6a0] hover:shadow-md"
                   value={subjectCategoryFilter}
-                  onChange={e => {
-                    setSubjectCategoryFilter(e.target.value);
-                    setSubjectFilter('All');
-                  }}
-                >
+                      onChange={e => { setSubjectCategoryFilter(e.target.value); setSubjectFilter('All'); }}
+                      style={{paddingRight: '2.5rem'}}
+                    >
+                      <option value="All">All</option>
                   {categories.map((cat) => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
-                <label className="font-semibold text-sm text-gray-700 ml-2">Subject:</label>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#06d6a0]">
+                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="#06d6a0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-center w-1/2 min-w-[160px]">
+                  <label className="text-xs text-gray-700 mb-1 self-start">Subject</label>
+                  <div className="relative w-full">
                 <select
-                  className="w-32 md:w-40 border border-gray-300 rounded px-2 py-1 text-gray-800 focus:ring-2 focus:ring-accent focus:border-accent transition"
+                      className="appearance-none w-full px-4 py-2 rounded-lg border border-[#06d6a0] text-[#06d6a0] font-semibold focus:ring-2 focus:ring-[#06d6a0] focus:border-[#06d6a0] transition bg-white/90 shadow-sm hover:border-[#06d6a0] hover:shadow-md"
                   value={subjectFilter}
                   onChange={e => setSubjectFilter(e.target.value)}
+                      style={{paddingRight: '2.5rem'}}
                 >
                   <option value="All">All</option>
                   {subjectsForSubjectCard.map((subject) => (
-                    <option key={subject} value={subject}>{subject}</option>
+                        <option key={subject as string} value={subject as string}>{subject as string}</option>
                   ))}
                 </select>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#06d6a0]">
+                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="#06d6a0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </span>
+                  </div>
               </div>
-              <div className="flex-1 flex flex-col justify-center items-center px-6 pb-6">
-                {isEmptySubjectPie ? (
-                  <div className="flex justify-center items-center min-h-[200px] text-center text-gray-300">No data available for the selected filter.</div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={220}>
-                    <PieChart>
-                      <Pie
-                        data={subjectPieData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        label={({ percent = 0 }) => (
-                          <span className="text-xs font-bold text-gray-700">{`${(percent * 100).toFixed(0)}%`}</span>
-                        )}
-                      >
-                        {subjectPieData.map((entry: any, index: number) => (
-                          <Cell key={`cell-subject-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip contentStyle={{ fontSize: 14, fontWeight: 500 }} />
-                      <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: 14, marginTop: 16 }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
               </div>
+              {/* Animated Counter */}
+              <AnimatedCounter value={filteredBySubjectCategory.length} className="text-6xl font-extrabold text-[#06d6a0] mb-2 transition-all duration-500" />
+              <span className="mt-1 mb-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold flex items-center animate-fade-in">
+                ↑ 3% this week
+              </span>
             </div>
-            {/* Card 3: Pie chart by topic */}
-            <div className="bg-white rounded-xl shadow-lg flex flex-col items-stretch w-full min-h-[400px] transition hover:shadow-xl border-t-8 border-primary group">
-              <div className="px-6 pt-6 pb-2 border-b border-gray-100">
-                <div className="text-xl font-bold text-primary mb-1 tracking-tight">Questions by Topic</div>
+          </div>
+        </div>
+        {/* Card 3: Questions by Topic (Dropdowns Above Counter, Compact Height, No Details) */}
+        <div className="relative rounded-2xl shadow-2xl overflow-hidden group transition-all duration-300 flex flex-col items-stretch justify-start h-full" style={{background: 'linear-gradient(135deg, #ffd60a 0%, #ffef8a 100%)', boxShadow: '0 12px 40px rgba(0,0,0,0.12)', border: '1.5px solid #e3e6f0', minHeight: '320px'}}>
+          <div className="absolute left-0 top-0 h-full w-2 bg-[#ffd60a]" />
+          <div className="absolute inset-0 backdrop-blur-lg bg-[#f5f6fa]/95" />
+          <div className="relative z-10 p-8 flex flex-col items-center justify-start w-full h-full">
+            {/* Card Header */}
+            <div className="flex items-center mb-6 w-full justify-center">
+              <span className="inline-block w-2 h-6 rounded-full mr-3" style={{background: '#ffd60a'}}></span>
+              <h2 className="text-2xl font-bold text-[#2d3748] tracking-tight">Questions by Topic</h2>
               </div>
-              <div className="flex flex-row flex-wrap justify-center items-center gap-2 mt-4 mb-4 px-6">
-                <label className="font-semibold text-sm text-gray-700">Category:</label>
+            <div className="flex flex-col items-center justify-center w-full">
+              {/* Dropdown Filters (Category, Subject, Topic) */}
+              <div className="flex flex-wrap justify-center gap-4 mb-6 w-full max-w-3xl animate-fade-in">
+                <div className="flex flex-col items-center w-1/3 min-w-[160px]">
+                  <label className="text-xs text-gray-700 mb-1 self-start">Category</label>
+                  <div className="relative w-full">
                 <select
-                  className="w-32 md:w-40 border border-gray-300 rounded px-2 py-1 text-gray-800 focus:ring-2 focus:ring-primary focus:border-primary transition"
+                      className="appearance-none w-full px-4 py-2 rounded-lg border border-[#ffd60a] text-[#ffd60a] font-semibold focus:ring-2 focus:ring-[#ffd60a] focus:border-[#ffd60a] transition bg-white/90 shadow-sm hover:border-[#ffd60a] hover:shadow-md"
                   value={topicCategoryFilter}
-                  onChange={e => {
-                    setTopicCategoryFilter(e.target.value);
-                    setTopicSubjectFilter('All');
-                    setTopicFilter('All');
-                  }}
-                >
+                      onChange={e => { setTopicCategoryFilter(e.target.value); setTopicSubjectFilter('All'); setTopicFilter('All'); }}
+                      style={{paddingRight: '2.5rem'}}
+                    >
+                      <option value="All">All</option>
                   {categories.map((cat) => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
-                <label className="font-semibold text-sm text-gray-700 ml-2">Subject:</label>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#ffd60a]">
+                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="#ffd60a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-center w-1/3 min-w-[160px]">
+                  <label className="text-xs text-gray-700 mb-1 self-start">Subject</label>
+                  <div className="relative w-full">
                 <select
-                  className="w-32 md:w-40 border border-gray-300 rounded px-2 py-1 text-gray-800 focus:ring-2 focus:ring-primary focus:border-primary transition"
+                      className="appearance-none w-full px-4 py-2 rounded-lg border border-[#ffd60a] text-[#ffd60a] font-semibold focus:ring-2 focus:ring-[#ffd60a] focus:border-[#ffd60a] transition bg-white/90 shadow-sm hover:border-[#ffd60a] hover:shadow-md"
                   value={topicSubjectFilter}
-                  onChange={e => {
-                    setTopicSubjectFilter(e.target.value);
-                    setTopicFilter('All');
-                  }}
+                      onChange={e => { setTopicSubjectFilter(e.target.value); setTopicFilter('All'); }}
+                      style={{paddingRight: '2.5rem'}}
                 >
                   <option value="All">All</option>
                   {subjectsForTopicCard.map((subject) => (
-                    <option key={subject} value={subject}>{subject}</option>
+                        <option key={subject as string} value={subject as string}>{subject as string}</option>
                   ))}
                 </select>
-                <label className="font-semibold text-sm text-gray-700 ml-2">Topic:</label>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#ffd60a]">
+                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="#ffd60a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-center w-1/3 min-w-[160px]">
+                  <label className="text-xs text-gray-700 mb-1 self-start">Topic</label>
+                  <div className="relative w-full">
                 <select
-                  className="w-32 md:w-40 border border-gray-300 rounded px-2 py-1 text-gray-800 focus:ring-2 focus:ring-primary focus:border-primary transition"
+                      className="appearance-none w-full px-4 py-2 rounded-lg border border-[#ffd60a] text-[#ffd60a] font-semibold focus:ring-2 focus:ring-[#ffd60a] focus:border-[#ffd60a] transition bg-white/90 shadow-sm hover:border-[#ffd60a] hover:shadow-md"
                   value={topicFilter}
                   onChange={e => setTopicFilter(e.target.value)}
+                      style={{paddingRight: '2.5rem'}}
                 >
                   <option value="All">All</option>
-                  {topicsWithQuestions.map((topic: string) => (
-                    <option key={topic} value={topic}>{topic}</option>
+                      {uniqueTopics.map((topic) => (
+                        <option key={topic as string} value={topic as string}>{topic as string}</option>
                   ))}
                 </select>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#ffd60a]">
+                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="#ffd60a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </span>
+                  </div>
               </div>
-              <div className="flex-1 flex flex-col justify-center items-center px-6 pb-6">
-                {isEmptyTopicPie ? (
-                  <div className="flex justify-center items-center min-h-[200px] text-center text-gray-300">No data available for the selected filter.</div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={220}>
-                    <PieChart>
-                      <Pie
-                        data={topicPieData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        label={({ percent = 0 }) => (
-                          <span className="text-xs font-bold text-gray-700">{`${(percent * 100).toFixed(0)}%`}</span>
-                        )}
-                      >
-                        {topicPieData.map((entry: any, index: number) => (
-                          <Cell key={`cell-topic-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip contentStyle={{ fontSize: 14, fontWeight: 500 }} />
-                      <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: 14, marginTop: 16 }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
+              </div>
+              {/* Animated Counter */}
+              <AnimatedCounter value={topicPieData.reduce((sum: number, item: any) => sum + item.value, 0)} className="text-6xl font-extrabold text-[#ffd60a] mb-2 transition-all duration-500" />
+              <span className="mt-1 mb-2 px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 text-xs font-semibold flex items-center animate-fade-in">
+                ↑ 2% this week
+              </span>
+            </div>
               </div>
             </div>
           </div>
@@ -663,8 +643,6 @@ const AdminDashboard: React.FC = () => {
               </tbody>
             </table>
           </div>
-        </>
-      ) : null}
     </div>
   );
 };

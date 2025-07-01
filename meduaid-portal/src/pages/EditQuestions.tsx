@@ -12,11 +12,10 @@ type EditFormInputs = {
 
 const EditQuestions: React.FC = () => {
   const { jwt } = useAuth();
-  const [rejected, setRejected] = useState<any[]>([]);
+  const [questions, setQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [formImages, setFormImages] = useState<FileList | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -35,27 +34,26 @@ const EditQuestions: React.FC = () => {
   });
 
   useEffect(() => {
-    const fetchRejected = async () => {
+    const fetchQuestions = async () => {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch('http://localhost:5050/api/submissions?status=rejected', {
+        const res = await fetch('http://localhost:5050/api/submissions?status=rejected,draft', {
           headers: { Authorization: `Bearer ${jwt}` },
         });
-        if (!res.ok) throw new Error('Failed to fetch rejected questions');
+        if (!res.ok) throw new Error('Failed to fetch questions');
         const data = await res.json();
-        setRejected(Array.isArray(data) ? data : data.submissions || []);
+        setQuestions(Array.isArray(data) ? data : data.submissions || []);
       } catch (err: any) {
         setError(err.message || 'Network error');
       }
       setLoading(false);
     };
-    if (jwt) fetchRejected();
+    if (jwt) fetchQuestions();
   }, [jwt]);
 
   const startEdit = (q: any) => {
     if (editingId === q._id) {
-      // Toggle close if already open
       setEditingId(null);
       setImagePreviews([]);
       setFormImages(null);
@@ -73,18 +71,7 @@ const EditQuestions: React.FC = () => {
     setFormImages(null);
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    setFormImages(files);
-    setValue('images', files);
-    if (files) {
-      setImagePreviews(Array.from(files).map(file => URL.createObjectURL(file)));
-    } else {
-      setImagePreviews([]);
-    }
-  };
-
-  const onSubmit = async (data: EditFormInputs) => {
+  const onSubmit = async (data: any) => {
     if (!editingId) return;
     setError('');
     try {
@@ -94,16 +81,16 @@ const EditQuestions: React.FC = () => {
         Array.from(formImages).forEach(file => formData.append('images', file));
         // Add other fields
         formData.append('question', data.question);
-        data.choices.forEach((c, i) => formData.append(`choices[${i}]`, c));
-        data.explanations.forEach((e, i) => formData.append(`explanations[${i}]`, e));
+        data.choices.forEach((c: string, i: number) => formData.append(`choices[${i}]`, c));
+        data.explanations.forEach((e: string, i: number) => formData.append(`explanations[${i}]`, e));
         formData.append('reference', data.reference);
-        formData.append('status', 'pending');
+        formData.append('status', data.status === 'draft' ? 'draft' : 'pending');
         const res = await fetch(`http://localhost:5050/api/submissions/${editingId}`, {
           method: 'PATCH',
           headers: { Authorization: `Bearer ${jwt}` },
           body: formData,
         });
-        if (!res.ok) throw new Error('Failed to resubmit question');
+        if (!res.ok) throw new Error('Failed to update question');
       } else {
         // No image change
         const res = await fetch(`http://localhost:5050/api/submissions/${editingId}`, {
@@ -117,14 +104,12 @@ const EditQuestions: React.FC = () => {
             choices: data.choices,
             explanations: data.explanations,
             reference: data.reference,
-            status: 'pending',
+            status: data.status === 'draft' ? 'draft' : 'pending',
           }),
         });
-        if (!res.ok) throw new Error('Failed to resubmit question');
+        if (!res.ok) throw new Error('Failed to update question');
       }
-      setRejected(prev => prev.filter(q => q._id !== editingId));
-      setSubmitted(true);
-      setTimeout(() => setSubmitted(false), 1500);
+      setQuestions(prev => prev.filter(q => q._id !== editingId));
       setEditingId(null);
       setImagePreviews([]);
       setFormImages(null);
@@ -134,21 +119,23 @@ const EditQuestions: React.FC = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-4 md:p-8 mt-8">
-      <h2 className="text-2xl font-bold mb-6 text-primary text-center">Edit Rejected Questions</h2>
+    <div className="max-w-2xl mx-auto p-4">
       {loading ? (
-        <div className="text-gray-400">Loading...</div>
+        <div>Loading...</div>
       ) : error ? (
         <div className="text-red-500">{error}</div>
-      ) : rejected.length === 0 ? (
-        <div className="text-gray-500">No rejected questions.</div>
+      ) : questions.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <p className="text-gray-500 mb-4 max-w-md">You currently have no draft or rejected questions to edit. Once you save a draft or receive feedback on a submission, you'll be able to edit it here.</p>
+          <a href="/submit-question" className="inline-block bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-dark transition">Submit a New Question</a>
+        </div>
       ) : (
         <div className="flex flex-col gap-6">
-          {rejected.map((q) => (
-            <div key={q._id} className="rounded-xl border border-red-200 bg-red-50 shadow p-4 md:p-6 flex flex-col gap-2">
+          {questions.map((q) => (
+            <div key={q._id} className={`rounded-xl border shadow p-4 md:p-6 flex flex-col gap-2 ${q.status === 'rejected' ? 'border-red-200 bg-red-50' : 'border-yellow-200 bg-yellow-50'}`}>
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                 <div className="font-semibold text-base md:text-lg text-gray-900">{q.question}</div>
-                <div className="text-xs md:text-sm px-3 py-1 rounded-full bg-red-100 text-red-700 font-semibold w-fit">Reason: {q.rejectionReason || '-'}</div>
+                <div className={`text-xs md:text-sm px-3 py-1 rounded-full font-semibold w-fit ${q.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{q.status === 'rejected' ? `Reason: ${q.rejectionReason || '-'}` : 'Draft'}</div>
               </div>
               {q.images && q.images.length > 0 && (
                 <div className="flex gap-2 flex-wrap mt-2">
@@ -168,10 +155,9 @@ const EditQuestions: React.FC = () => {
                   onClick={() => startEdit(q)}
                   disabled={!!editingId && editingId !== q._id}
                 >
-                  Edit & Resubmit
+                  {q.status === 'rejected' ? 'Edit & Resubmit' : 'Edit Draft'}
                 </button>
               </div>
-              {/* Inline edit form */}
               {editingId === q._id && (
                 <form onSubmit={handleSubmit(onSubmit)} className="mt-4 bg-white rounded-xl shadow-inner p-4 flex flex-col gap-4">
                   <div>
@@ -226,7 +212,16 @@ const EditQuestions: React.FC = () => {
                       accept="image/*"
                       multiple
                       className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-dark"
-                      onChange={handleImageChange}
+                      onChange={e => {
+                        const files = e.target.files;
+                        setFormImages(files);
+                        setValue('images', files);
+                        if (files) {
+                          setImagePreviews(Array.from(files).map(file => URL.createObjectURL(file)));
+                        } else {
+                          setImagePreviews([]);
+                        }
+                      }}
                       ref={fileInputRef}
                     />
                     <div className="flex gap-2 flex-wrap mt-2">
@@ -264,16 +259,24 @@ const EditQuestions: React.FC = () => {
                     >
                       Cancel
                     </button>
+                    {q.status === 'draft' && (
+                      <button
+                        type="button"
+                        className="bg-yellow-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-yellow-600 transition"
+                        disabled={isSubmitting}
+                        onClick={handleSubmit((data) => onSubmit({ ...data, status: 'draft' }))}
+                      >
+                        {isSubmitting ? 'Saving...' : 'Save as Draft'}
+                      </button>
+                    )}
                     <button
                       type="submit"
                       className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-dark transition"
                       disabled={isSubmitting}
                     >
-                      {isSubmitting ? 'Resubmitting...' : 'Resubmit'}
+                      {isSubmitting ? (q.status === 'draft' ? 'Submitting...' : 'Resubmitting...') : (q.status === 'draft' ? 'Submit' : 'Resubmit')}
                     </button>
                   </div>
-                  {submitted && <div className="text-green-600 text-center mt-2">Resubmitted!</div>}
-                  {error && <div className="text-red-500 text-center mt-2">{error}</div>}
                 </form>
               )}
             </div>

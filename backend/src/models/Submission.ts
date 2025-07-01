@@ -11,7 +11,7 @@ export interface ISubmission extends Document {
   reference: string;
   difficulty: 'easy' | 'normal' | 'hard';
   images: string[];
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'draft';
   rejectionReason?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -28,7 +28,7 @@ const SubmissionSchema = new Schema<ISubmission>({
   reference: { type: String, required: true },
   difficulty: { type: String, enum: ['easy', 'normal', 'hard'], required: true },
   images: { type: [String], default: [] },
-  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  status: { type: String, enum: ['pending', 'approved', 'rejected', 'draft'], default: 'pending' },
   rejectionReason: { type: String },
 }, { timestamps: true });
 

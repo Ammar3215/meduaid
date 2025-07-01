@@ -1,4 +1,3 @@
-import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
@@ -8,7 +7,7 @@ import VerifyEmail from './pages/VerifyEmail'
 import AdminDashboard from './pages/AdminDashboard'
 import ProtectedRoute from './routes/ProtectedRoute'
 import QuestionSubmission from './pages/QuestionSubmission'
-import EditRejectedQuestions from './pages/EditRejectedQuestions'
+import EditQuestions from './pages/EditQuestions'
 import PenaltiesManagement from './pages/PenaltiesManagement'
 import QuestionReview from './pages/QuestionReview'
 import AllSubmissions from './pages/AllSubmissions'
@@ -33,7 +32,7 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route index element={<Dashboard />} />
             <Route path="submit-question" element={<QuestionSubmission />} />
-            <Route path="edit-rejected" element={<EditRejectedQuestions />} />
+            <Route path="edit-questions" element={<EditQuestions />} />
           </Route>
           {/* Protected Admin Routes */}
           <Route element={<ProtectedRoute adminOnly={true} />}>

@@ -39,52 +39,55 @@ const Signup: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh]">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
-        <h2 className="text-2xl font-bold mb-6 text-center text-primary">Sign Up</h2>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label className="block mb-1 font-medium">Email</label>
-            <input
-              type="email"
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              {...register('email')}
-              autoComplete="email"
-            />
-            {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
+    <div className="flex items-center justify-center min-h-screen bg-accent-light">
+      <div className="flex flex-col items-center w-full">
+        <img src="/meduaid-logo.svg" alt="MeduAid Logo" className="h-24 mb-8" />
+        <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
+          <h2 className="text-2xl font-bold mb-6 text-center text-primary">Sign Up</h2>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div>
+              <label className="block mb-1 font-medium">Email</label>
+              <input
+                type="email"
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                {...register('email')}
+                autoComplete="email"
+              />
+              {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
+            </div>
+            <div>
+              <label className="block mb-1 font-medium">Password</label>
+              <input
+                type="password"
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                {...register('password')}
+                autoComplete="new-password"
+              />
+              {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>}
+            </div>
+            <div>
+              <label className="block mb-1 font-medium">Confirm Password</label>
+              <input
+                type="password"
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                {...register('confirmPassword')}
+                autoComplete="new-password"
+              />
+              {errors.confirmPassword && <p className="text-red-500 text-sm mt-1">{errors.confirmPassword.message}</p>}
+            </div>
+            {authError && <p className="text-red-600 text-center">{authError}</p>}
+            <button
+              type="submit"
+              className="w-full bg-primary text-white py-2 rounded-lg font-semibold hover:bg-primary-dark transition"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Signing up...' : 'Sign Up'}
+            </button>
+          </form>
+          <div className="text-center mt-4">
+            <span className="text-gray-600">Already have an account?</span>{' '}
+            <a href="/login" className="text-primary hover:underline">Login</a>
           </div>
-          <div>
-            <label className="block mb-1 font-medium">Password</label>
-            <input
-              type="password"
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              {...register('password')}
-              autoComplete="new-password"
-            />
-            {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>}
-          </div>
-          <div>
-            <label className="block mb-1 font-medium">Confirm Password</label>
-            <input
-              type="password"
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              {...register('confirmPassword')}
-              autoComplete="new-password"
-            />
-            {errors.confirmPassword && <p className="text-red-500 text-sm mt-1">{errors.confirmPassword.message}</p>}
-          </div>
-          {authError && <p className="text-red-600 text-center">{authError}</p>}
-          <button
-            type="submit"
-            className="w-full bg-primary text-white py-2 rounded-lg font-semibold hover:bg-primary-dark transition"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Signing up...' : 'Sign Up'}
-          </button>
-        </form>
-        <div className="text-center mt-4">
-          <span className="text-gray-600">Already have an account?</span>{' '}
-          <a href="/login" className="text-primary hover:underline">Login</a>
         </div>
       </div>
     </div>
