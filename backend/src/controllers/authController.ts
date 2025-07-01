@@ -25,6 +25,7 @@ export const register: RequestHandler = async (req, res) => {
       password: hashedPassword,
       emailVerificationToken,
       verified: false,
+      role: 'writer',
     });
     // Log token and user
     console.log('Generated token:', emailVerificationToken);
@@ -170,6 +171,38 @@ export const changePassword: RequestHandler = async (req, res) => {
     res.json({ message: 'Password updated successfully.' });
   } catch (err) {
     console.error('Change password error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const updateProfile: RequestHandler = async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const { name, email } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    user.name = name || user.name;
+    user.email = email || user.email;
+    
+    await user.save();
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isAdmin: user.role === 'admin',
+        isVerified: user.verified,
+      }
+    });
+  } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
 }; 

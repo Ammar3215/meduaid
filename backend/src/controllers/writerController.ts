@@ -1,6 +1,7 @@
 import { Request, Response, RequestHandler } from 'express';
 import Submission from '../models/Submission';
 import Penalty from '../models/Penalty';
+import mongoose from 'mongoose';
 
 export const getStats: RequestHandler = async (req, res) => {
   try {
@@ -12,7 +13,7 @@ export const getStats: RequestHandler = async (req, res) => {
     const writerId = user.id;
     const totalSubmissions = await Submission.countDocuments({ writer: writerId });
     const submissionsByStatus = await Submission.aggregate([
-      { $match: { writer: writerId } },
+      { $match: { writer: new mongoose.Types.ObjectId(writerId) } },
       { $group: { _id: '$status', count: { $sum: 1 } } }
     ]);
     const recentSubmissionsDocs = await Submission.find({ writer: writerId }).sort({ createdAt: -1 });

@@ -89,6 +89,15 @@ export const createPenalty: RequestHandler = async (req, res) => {
   }
 };
 
+export const getWriters: RequestHandler = async (req, res) => {
+  try {
+    const writers = await User.find({ role: 'writer' }).select('name email');
+    res.json(writers);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export const deletePenalty: RequestHandler = async (req, res) => {
   try {
     const user = (req as any).user;
