@@ -17,6 +17,7 @@ interface AuthContextType {
   logout: () => void;
   verifyEmail: (email: string) => Promise<boolean>;
   loading: boolean;
+  setUser: (user: User | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,7 +32,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const userData = localStorage.getItem('user');
     if (token && userData) {
       setJwt(token);
-      setUser(JSON.parse(userData));
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error("Failed to parse user data from localStorage", error);
+        setUser(null);
+        localStorage.removeItem('user');
+        localStorage.removeItem('jwt');
+      }
     }
     setLoading(false);
   }, []);
@@ -95,7 +104,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, jwt, login, signup, logout, verifyEmail, loading }}>
+    <AuthContext.Provider value={{ user, jwt, login, signup, logout, verifyEmail, loading, setUser }}>
       {children}
     </AuthContext.Provider>
   );

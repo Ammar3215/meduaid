@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { subjectsStructure } from '../utils/subjectsStructure';
 
 const COLORS = ['#00bcd4', '#2196f3', '#8bc34a', '#ffc107', '#607d8b', '#ff9800', '#9c27b0'];
 
 const Dashboard: React.FC = () => {
-  const { jwt } = useAuth();
+  const { jwt, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -28,6 +29,12 @@ const Dashboard: React.FC = () => {
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState('');
   const [fullImage, setFullImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user && user.isAdmin) {
+      navigate('/admin', { replace: true });
+    }
+  }, [user, navigate]);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -68,7 +75,7 @@ const Dashboard: React.FC = () => {
       fetchStats();
       fetchPenalties();
     }
-  }, [jwt]);
+  }, [jwt, location]);
 
   // Prepare data for charts
   const pieData = topics.map((topic: string, idx: number) => ({
@@ -103,6 +110,31 @@ const Dashboard: React.FC = () => {
       setModalError('Network error.');
     }
     setModalLoading(false);
+  };
+
+  // Add status change handler for modal
+  const handleModalStatusChange = async (newStatus: string) => {
+    if (!selectedSubmission) return;
+    try {
+      const response = await fetch(`http://localhost:5050/api/submissions/${selectedSubmission._id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (response.ok) {
+        setStats((prev: any) => {
+          if (!prev) return prev;
+          const updatedSubmissions = prev.recentSubmissions.map((q: any) =>
+            q._id === selectedSubmission._id ? { ...q, status: newStatus } : q
+          );
+          return { ...prev, recentSubmissions: updatedSubmissions };
+        });
+        setSelectedSubmission({ ...selectedSubmission, status: newStatus });
+      }
+    } catch {}
   };
 
   return (
@@ -294,7 +326,18 @@ const Dashboard: React.FC = () => {
                         </ul>
                       </div>
                       <div><span className="font-semibold">Reference:</span> {selectedSubmission.reference}</div>
-                      <div><span className="font-semibold">Status:</span> {selectedSubmission.status}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">Status:</span>
+                        <select
+                          className="border rounded px-2 py-1 text-sm"
+                          value={selectedSubmission.status}
+                          onChange={e => handleModalStatusChange(e.target.value)}
+                        >
+                          <option value="approved">Approved</option>
+                          <option value="pending">Pending</option>
+                          <option value="rejected">Rejected</option>
+                        </select>
+                      </div>
                       <div><span className="font-semibold">Rejection Reason:</span> {selectedSubmission.rejectionReason || '-'}</div>
                       <div><span className="font-semibold">Submitted At:</span> {new Date(selectedSubmission.createdAt).toLocaleString()}</div>
                       <div><span className="font-semibold">Last Updated:</span> {new Date(selectedSubmission.updatedAt).toLocaleString()}</div>
