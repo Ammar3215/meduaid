@@ -14,25 +14,6 @@ function toCSV(rows: any[], columns: { label: string, key: string }[]) {
   return `${header}\n${body}`;
 }
 
-// Utility to get status counts
-function getStatusCounts(questions: any[]) {
-  let approved = 0, pending = 0, rejected = 0;
-  for (const q of questions) {
-    if (q.status === 'approved') approved++;
-    else if (q.status === 'pending') pending++;
-    else if (q.status === 'rejected') rejected++;
-  }
-  return { approved, pending, rejected };
-}
-
-// Add helper for avatar
-function getInitials(name: string) {
-  if (!name) return '?';
-  const parts = name.split(' ');
-  if (parts.length === 1) return parts[0][0].toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
 // Tooltip component
 function Tooltip({ children, text }: { children: React.ReactNode, text: string }) {
   const [show, setShow] = React.useState(false);
@@ -71,7 +52,6 @@ const AllAdminSubmissions: React.FC = () => {
   const [modalError, setModalError] = useState('');
   const [fullImage, setFullImage] = useState<string | null>(null);
   const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
-  const statusCounts = getStatusCounts(questions);
 
   useEffect(() => {
     const fetchSubmissions = async () => {
@@ -99,21 +79,6 @@ const AllAdminSubmissions: React.FC = () => {
     if (jwt) fetchSubmissions();
   }, [jwt]);
 
-  const handleStatusChange = async (id: string, newStatus: string) => {
-    try {
-      const response = await fetch(`http://localhost:5050/api/submissions/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${jwt}`,
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (response.ok) {
-        setQuestions(prev => prev.map(q => q._id === id ? { ...q, status: newStatus, rejectionReason: newStatus === 'rejected' ? q.rejectionReason : undefined } : q));
-      }
-    } catch {}
-  };
   const handleReasonChange = (id: string, reason: string) => {
     setQuestions(prev => prev.map(q => q._id === id ? { ...q, rejectionReason: reason } : q));
   };
@@ -218,27 +183,6 @@ const AllAdminSubmissions: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto">
-      {/* Header Section */}
-      <div className="w-full bg-blue-50 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between px-8 py-8 mt-8 mb-8 shadow-none border border-blue-100">
-        <div className="mb-6 md:mb-0">
-          <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2">All Submissions</h1>
-          <p className="text-lg md:text-xl font-medium text-gray-500">Manage and review all question submissions</p>
-        </div>
-        <div className="flex flex-row gap-8 w-full md:w-auto justify-between md:justify-end">
-          <div className="flex flex-col items-end">
-            <span className="text-3xl font-extrabold text-[#10B981] leading-none">{statusCounts.approved}</span>
-            <span className="text-xs uppercase tracking-widest text-gray-400 font-semibold mt-1">Approved</span>
-          </div>
-          <div className="flex flex-col items-end">
-            <span className="text-3xl font-extrabold text-[#F59E0B] leading-none">{statusCounts.pending}</span>
-            <span className="text-xs uppercase tracking-widest text-gray-400 font-semibold mt-1">Pending</span>
-          </div>
-          <div className="flex flex-col items-end">
-            <span className="text-3xl font-extrabold text-[#EF4444] leading-none">{statusCounts.rejected}</span>
-            <span className="text-xs uppercase tracking-widest text-gray-400 font-semibold mt-1">Rejected</span>
-          </div>
-        </div>
-      </div>
       {/* Main Content Section */}
       <div className="bg-white rounded-xl shadow-lg p-8">
         {/* Enhanced Filters Section */}
@@ -355,7 +299,7 @@ const AllAdminSubmissions: React.FC = () => {
                               type="text"
                               className="border rounded px-2 py-1 w-full mb-1"
                               value={q.rejectionReason || ''}
-                              onChange={e => handleReasonChange(q._id, q.rejectionReason || '')}
+                              onChange={e => handleReasonChange(q._id, e.target.value)}
                               placeholder="Enter reason"
                             />
                             <button

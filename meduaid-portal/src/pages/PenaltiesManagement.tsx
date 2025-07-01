@@ -26,7 +26,7 @@ const PenaltiesManagement: React.FC = () => {
   
   const [selectedWriter, setSelectedWriter] = useState('');
   const [reason, setReason] = useState('');
-  const [penaltyType, setPenaltyType] = useState('warning');
+  const [penaltyType, setPenaltyType] = useState('strike');
   const [amount, setAmount] = useState('');
 
   const [loading, setLoading] = useState(true);
@@ -34,6 +34,10 @@ const PenaltiesManagement: React.FC = () => {
 
   const [filterWriter, setFilterWriter] = useState('All');
   const [filterType, setFilterType] = useState('All');
+
+  const [writerError, setWriterError] = useState('');
+  const [reasonError, setReasonError] = useState('');
+  const [amountError, setAmountError] = useState('');
 
   useEffect(() => {
     if (user && !user.isAdmin) {
@@ -74,14 +78,23 @@ const PenaltiesManagement: React.FC = () => {
   }, [user, navigate, jwt]);
 
   const handleApplyPenalty = async () => {
-    if (!selectedWriter || !reason) {
-      setError('Please select a writer and provide a reason.');
-      return;
+    let hasError = false;
+    setWriterError('');
+    setReasonError('');
+    setAmountError('');
+    if (!selectedWriter) {
+      setWriterError('Field missing');
+      hasError = true;
+    }
+    if (!reason) {
+      setReasonError('Field missing');
+      hasError = true;
     }
     if (penaltyType === 'monetary' && (!amount || Number(amount) <= 0)) {
-      setError('Please enter a valid monetary amount.');
-      return;
+      setAmountError('Field missing');
+      hasError = true;
     }
+    if (hasError) return;
     setError('');
     try {
       const res = await fetch('http://localhost:5050/api/admin/penalties', {
@@ -94,7 +107,7 @@ const PenaltiesManagement: React.FC = () => {
           writer: selectedWriter,
           reason,
           type: penaltyType,
-          amount: penaltyType === 'monetary' ? Number(amount) : undefined,
+          ...(penaltyType === 'monetary' ? { amount: Number(amount) } : {})
         }),
       });
       if (!res.ok) {
@@ -106,7 +119,7 @@ const PenaltiesManagement: React.FC = () => {
       // Reset form
       setSelectedWriter('');
       setReason('');
-      setPenaltyType('warning');
+      setPenaltyType('strike');
       setAmount('');
     } catch (err: any) {
       setError(err.message);
@@ -140,13 +153,24 @@ const PenaltiesManagement: React.FC = () => {
       {/* Apply Penalty Card */}
       <div className="bg-white rounded-xl shadow p-6 mb-8 w-full max-w-4xl mx-auto">
         <h3 className="font-semibold text-lg mb-4 text-gray-800">Apply Penalty</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+        {error && <div className="mb-4 text-red-600 font-semibold text-center">{error}</div>}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
           <div className="w-full">
             <label className="block text-sm font-medium text-gray-700 mb-1">Writer</label>
-            <select value={selectedWriter} onChange={e => setSelectedWriter(e.target.value)} className="w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary focus:border-primary">
+            <select
+              value={selectedWriter}
+              onChange={e => setSelectedWriter(e.target.value)}
+              className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary focus:border-primary transition-all duration-150 ${writerError ? 'border-red-500 ring-1 ring-red-400' : ''}`}
+            >
               <option value="">Select Writer</option>
               {writers.map(w => <option key={w._id} value={w._id}>{w.name} ({w.email})</option>)}
             </select>
+            {writerError && (
+              <div className="flex items-center gap-1 text-red-600 text-xs mt-1 animate-fade-in">
+                <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" /></svg>
+                <span className="font-semibold">{writerError}</span>
+              </div>
+            )}
           </div>
           <div className="w-full">
             <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
@@ -163,8 +187,14 @@ const PenaltiesManagement: React.FC = () => {
                 placeholder="e.g., 50"
                 value={amount}
                 onChange={e => setAmount(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary focus:border-primary"
+                className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary focus:border-primary transition-all duration-150 ${amountError ? 'border-red-500 ring-1 ring-red-400' : ''}`}
               />
+              {amountError && (
+                <div className="flex items-center gap-1 text-red-600 text-xs mt-1 animate-fade-in">
+                  <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" /></svg>
+                  <span className="font-semibold">{amountError}</span>
+                </div>
+              )}
             </div>
           )}
           <div className="w-full col-span-1 md:col-span-2 lg:col-span-4">
@@ -174,8 +204,14 @@ const PenaltiesManagement: React.FC = () => {
               placeholder="Reason for penalty"
               value={reason}
               onChange={e => setReason(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary focus:border-primary"
+              className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary focus:border-primary transition-all duration-150 ${reasonError ? 'border-red-500 ring-1 ring-red-400' : ''}`}
             />
+            {reasonError && (
+              <div className="flex items-center gap-1 text-red-600 text-xs mt-1 animate-fade-in">
+                <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" /></svg>
+                <span className="font-semibold">{reasonError}</span>
+              </div>
+            )}
           </div>
           <div className="w-full col-span-1 md:col-span-2 lg:col-span-4">
             <button onClick={handleApplyPenalty} className="w-full bg-primary text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary-dark transition-colors">Apply Penalty</button>

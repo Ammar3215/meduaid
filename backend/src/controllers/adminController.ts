@@ -16,12 +16,14 @@ export const getStats: RequestHandler = async (req, res) => {
     const submissionsByStatus = await Submission.aggregate([
       { $group: { _id: '$status', count: { $sum: 1 } } }
     ]);
-    const recentSubmissions = await Submission.find().sort({ createdAt: -1 }).limit(5).populate('writer', 'name email');
+    const allSubmissions = await Submission.find().sort({ createdAt: -1 }).populate('writer', 'name email');
+    const recentSubmissions = allSubmissions.slice(0, 5);
     res.json({
       totalUsers,
       totalSubmissions,
       submissionsByStatus,
-      recentSubmissions
+      recentSubmissions,
+      allSubmissions
     });
     return;
   } catch (err) {

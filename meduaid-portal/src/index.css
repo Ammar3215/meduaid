@@ -76,3 +76,18 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Modal stacking context fixes */
+.modal {
+  z-index: 9999;
+  position: fixed;
+}
+.all-penalties-modal {
+  z-index: 10000;
+}
+.modal-backdrop {
+  z-index: 1040;
+}
+.modal-dialog {
+  z-index: 1050;
+}

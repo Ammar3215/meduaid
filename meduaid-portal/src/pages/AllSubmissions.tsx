@@ -69,8 +69,8 @@ const AllSubmissions: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-8 mt-8">
-      <h2 className="text-2xl font-bold mb-6 text-primary text-center">All My Submissions</h2>
+    <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-lg p-8 mt-8">
+      {/* Removed All My Submissions header as requested */}
       {loading ? (
         <div className="text-center">Loading...</div>
       ) : error ? (
@@ -79,7 +79,7 @@ const AllSubmissions: React.FC = () => {
         <div className="text-center text-gray-500">No submissions found.</div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full border">
+          <table className="min-w-full border table-fixed">
             <thead>
               <tr className="bg-gray-100">
                 <th className="py-2 px-4 border">Question</th>
@@ -94,7 +94,15 @@ const AllSubmissions: React.FC = () => {
               {submissions.map((sub) => (
                 <tr key={sub._id} className="border-b">
                   <td className="py-2 px-4 border max-w-xs truncate" title={sub.question}>{sub.question}</td>
-                  <td className="py-2 px-4 border capitalize">{sub.status}</td>
+                  <td className="py-2 px-4 border">
+                    <span className={`inline-block px-2 py-1 rounded text-xs font-bold
+                      ${sub.status === 'approved' ? 'bg-green-100 text-green-700' :
+                        sub.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                        'bg-yellow-100 text-yellow-700'}`}
+                    >
+                      {sub.status}
+                    </span>
+                  </td>
                   <td className="py-2 px-4 border text-red-600">{sub.status === 'rejected' ? sub.rejectionReason || '-' : '-'}</td>
                   <td className="py-2 px-4 border">{new Date(sub.createdAt).toLocaleString()}</td>
                   <td className="py-2 px-4 border">{new Date(sub.updatedAt).toLocaleString()}</td>
@@ -128,29 +136,46 @@ const AllSubmissions: React.FC = () => {
             ) : modalError ? (
               <div className="text-center text-red-500">{modalError}</div>
             ) : selectedSubmission ? (
-              <div className="space-y-2 text-left">
-                <div><span className="font-semibold">Subject:</span> {selectedSubmission.subject}</div>
-                <div><span className="font-semibold">Topic:</span> {selectedSubmission.topic}</div>
-                <div><span className="font-semibold">Question:</span> {selectedSubmission.question}</div>
-                <div><span className="font-semibold">Choices:</span>
-                  <ul className="list-disc pl-6">
-                    {selectedSubmission.choices?.map((c: string, i: number) => (
-                      <li key={i}>{c}</li>
-                    ))}
-                  </ul>
+              <div className="space-y-4 text-left overflow-y-auto max-h-[70vh] pr-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <div className="mb-2"><span className="font-semibold">Subject:</span> {selectedSubmission.subject}</div>
+                    <div className="mb-2"><span className="font-semibold">Topic:</span> {selectedSubmission.topic}</div>
+                    <div className="mb-2"><span className="font-semibold">Reference:</span> {selectedSubmission.reference}</div>
+                  </div>
+                  <div>
+                    <div className="mb-2"><span className="font-semibold">Status:</span> <span className={`inline-block px-2 py-1 rounded text-xs font-bold
+                      ${selectedSubmission.status === 'approved' ? 'bg-green-100 text-green-700' :
+                        selectedSubmission.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                        'bg-yellow-100 text-yellow-700'}`}>{selectedSubmission.status}</span></div>
+                    <div className="mb-2"><span className="font-semibold">Rejection Reason:</span> {selectedSubmission.rejectionReason || '-'}</div>
+                    <div className="mb-2"><span className="font-semibold">Submitted At:</span> {new Date(selectedSubmission.createdAt).toLocaleString()}</div>
+                    <div className="mb-2"><span className="font-semibold">Last Updated:</span> {new Date(selectedSubmission.updatedAt).toLocaleString()}</div>
+                  </div>
                 </div>
-                <div><span className="font-semibold">Explanations:</span>
-                  <ul className="list-disc pl-6">
-                    {selectedSubmission.explanations?.map((e: string, i: number) => (
-                      <li key={i}>{e}</li>
-                    ))}
-                  </ul>
+                <div className="mb-2">
+                  <span className="font-semibold">Question:</span>
+                  <div className="mt-1 bg-gray-50 rounded p-3 border text-gray-800">{selectedSubmission.question}</div>
                 </div>
-                <div><span className="font-semibold">Reference:</span> {selectedSubmission.reference}</div>
-                <div><span className="font-semibold">Status:</span> {selectedSubmission.status}</div>
-                <div><span className="font-semibold">Rejection Reason:</span> {selectedSubmission.rejectionReason || '-'}</div>
-                <div><span className="font-semibold">Submitted At:</span> {new Date(selectedSubmission.createdAt).toLocaleString()}</div>
-                <div><span className="font-semibold">Last Updated:</span> {new Date(selectedSubmission.updatedAt).toLocaleString()}</div>
+                <div>
+                  <span className="font-semibold">Choices & Explanations:</span>
+                  <table className="w-full mt-2 border rounded bg-gray-50">
+                    <thead>
+                      <tr>
+                        <th className="px-2 py-1 text-left font-semibold text-gray-700">Choice</th>
+                        <th className="px-2 py-1 text-left font-semibold text-gray-700">Explanation</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedSubmission.choices?.map((c: string, i: number) => (
+                        <tr key={i} className="border-t">
+                          <td className="px-2 py-1 align-top">{c}</td>
+                          <td className="px-2 py-1 align-top">{selectedSubmission.explanations?.[i]}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
                 {selectedSubmission.images && selectedSubmission.images.length > 0 && (
                   <div>
                     <span className="font-semibold">Images:</span>

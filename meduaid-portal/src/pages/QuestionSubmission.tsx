@@ -26,6 +26,7 @@ const QuestionSubmission: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [draftSuccess, setDraftSuccess] = useState(false);
   const {
     register,
     handleSubmit,
@@ -110,9 +111,54 @@ const QuestionSubmission: React.FC = () => {
         return;
       }
       setSuccess(true);
-      setTimeout(() => setSuccess(false), 2000);
-      // Optionally reset form
-      // reset();
+      // Reset the form for a new question
+      setTimeout(() => {
+        setSuccess(false);
+        window.location.reload(); // quick reset for now; can be improved to use form reset
+      }, 1500);
+    } catch {
+      setError('Network error');
+    }
+    setLoading(false);
+  };
+
+  // Save as Draft handler
+  const onSaveDraft = async (data: QuestionFormInputs) => {
+    setLoading(true);
+    setError('');
+    setDraftSuccess(false);
+    try {
+      let imageUrls: string[] = [];
+      if (data.images && data.images.length > 0) {
+        imageUrls = await uploadImages(data.images);
+      }
+      const payload = {
+        category: data.category,
+        subject: data.subject,
+        topic: data.topic,
+        question: data.question,
+        choices: data.choices,
+        explanations: data.explanations,
+        reference: data.reference,
+        difficulty: data.difficulty,
+        images: imageUrls,
+        status: 'draft',
+      };
+      const response = await fetch('http://localhost:5050/api/submissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        setError('Failed to save draft');
+        setLoading(false);
+        return;
+      }
+      setDraftSuccess(true);
+      setTimeout(() => setDraftSuccess(false), 1500);
     } catch {
       setError('Network error');
     }
@@ -173,30 +219,24 @@ const QuestionSubmission: React.FC = () => {
           <textarea {...register('question')} className="w-full px-4 py-2 border rounded-lg min-h-[80px]" />
           {errors.question && <p className="text-red-500 text-sm mt-1">{errors.question.message}</p>}
         </div>
-        {/* Choices */}
+        {/* Choices & Explanations (A–E) */}
         <div>
-          <label className="block mb-1 font-medium">Choices (A–E)</label>
+          <label className="block mb-1 font-medium">Choices & Explanations (A–E)</label>
           {Array.from({ length: 5 }).map((_, i) => (
-            <input
-              key={i}
-              {...register(`choices.${i}` as const)}
-              className="w-full px-4 py-2 border rounded-lg mb-2"
-              placeholder={`Choice ${String.fromCharCode(65 + i)}`}
-            />
+            <div key={i} className="mb-4">
+              <input
+                {...register(`choices.${i}` as const)}
+                className="w-full px-4 py-2 border rounded-lg mb-1"
+                placeholder={`Choice ${String.fromCharCode(65 + i)}`}
+              />
+              <input
+                {...register(`explanations.${i}` as const)}
+                className="w-full px-4 py-2 border rounded-lg"
+                placeholder={`Explanation for Choice ${String.fromCharCode(65 + i)}`}
+              />
+            </div>
           ))}
           {errors.choices && <p className="text-red-500 text-sm mt-1">All choices are required.</p>}
-        </div>
-        {/* Explanations */}
-        <div>
-          <label className="block mb-1 font-medium">Explanations (A–E)</label>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <input
-              key={i}
-              {...register(`explanations.${i}` as const)}
-              className="w-full px-4 py-2 border rounded-lg mb-2"
-              placeholder={`Explain Choice ${String.fromCharCode(65 + i)}`}
-            />
-          ))}
           {errors.explanations && <p className="text-red-500 text-sm mt-1">All explanations are required.</p>}
         </div>
         {/* Image Uploader */}
@@ -225,15 +265,26 @@ const QuestionSubmission: React.FC = () => {
           </select>
           {errors.difficulty && <p className="text-red-500 text-sm mt-1">{errors.difficulty.message}</p>}
         </div>
-        <button
-          type="submit"
-          className="w-full bg-primary text-white py-2 rounded-lg font-semibold hover:bg-primary-dark transition"
-          disabled={isSubmitting || loading}
-        >
-          {isSubmitting || loading ? 'Submitting...' : 'Submit Question'}
-        </button>
-        {success && <div className="text-green-600 text-center mt-2">Question submitted!</div>}
+        <div className="flex justify-end gap-4 mt-8">
+          <button
+            type="button"
+            className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-400 transition"
+            disabled={isSubmitting || loading}
+            onClick={handleSubmit(onSaveDraft)}
+          >
+            {loading ? 'Saving...' : 'Save as Draft'}
+          </button>
+          <button
+            type="submit"
+            className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-dark transition"
+            disabled={isSubmitting || loading}
+          >
+            {loading ? 'Submitting...' : 'Submit'}
+          </button>
+        </div>
+        {success && <div className="text-green-600 text-center mt-2">Question submitted successfully!</div>}
         {error && <div className="text-red-500 text-center mt-2">{error}</div>}
+        {draftSuccess && <div className="text-green-600 text-center mt-2">Draft saved!</div>}
       </form>
     </div>
   );
