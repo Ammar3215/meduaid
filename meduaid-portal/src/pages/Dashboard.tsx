@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { subjectsStructure } from '../utils/subjectsStructure';
 import ReactDOM from 'react-dom';
 import { ExclamationCircleIcon } from '@heroicons/react/24/outline';
+import Skeleton from '../components/Skeleton';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
@@ -424,7 +425,12 @@ const Dashboard: React.FC = () => {
       <div className="bg-white rounded-xl shadow-lg p-6 w-full mt-8 px-4 md:px-8">
         <div className="text-lg font-bold mb-4 text-primary">Recently Submitted Questions</div>
         {loading ? (
-          <div className="flex justify-center items-center min-h-[120px] text-center text-gray-300">Loading...</div>
+          <div className="flex flex-col gap-4">
+            <Skeleton height={40} />
+            <Skeleton height={200} />
+            <Skeleton height={40} width="60%" />
+            <Skeleton height={40} width="80%" />
+          </div>
         ) : error ? (
           <div className="flex justify-center items-center min-h-[120px] text-center text-red-500">{error}</div>
         ) : (stats?.recentSubmissions?.length === 0) ? (

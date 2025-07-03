@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../context/AuthContext';
+import Skeleton from '../components/Skeleton';
 
 type EditFormInputs = {
   question: string;
@@ -123,7 +124,12 @@ const EditQuestions: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto p-4">
       {loading ? (
-        <div>Loading...</div>
+        <div className="flex flex-col gap-4">
+          <Skeleton height={40} />
+          <Skeleton height={200} />
+          <Skeleton height={40} width="60%" />
+          <Skeleton height={40} width="80%" />
+        </div>
       ) : error ? (
         <div className="text-red-500">{error}</div>
       ) : questions.length === 0 ? (

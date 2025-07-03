@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { subjectsStructure } from '../utils/subjectsStructure';
 import { FunnelIcon, BookOpenIcon, TagIcon, CheckCircleIcon, XCircleIcon, ClockIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import ReactDOM from 'react-dom';
+import Skeleton from '../components/Skeleton';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
@@ -167,7 +168,12 @@ const QuestionReview: React.FC = () => {
         </div>
         <div className="bg-white rounded-xl shadow p-6 w-full">
           {loading ? (
-            <div className="flex justify-center items-center min-h-[120px] text-center text-gray-300">Loading...</div>
+            <div className="flex flex-col gap-4">
+              <Skeleton height={40} />
+              <Skeleton height={200} />
+              <Skeleton height={40} width="60%" />
+              <Skeleton height={40} width="80%" />
+            </div>
           ) : error ? (
             <div className="flex justify-center items-center min-h-[120px] text-center text-red-500">{error}</div>
           ) : filteredQuestions.length === 0 ? (

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { subjectsStructure } from '../utils/subjectsStructure';
 import QuestionViewModal from '../components/QuestionViewModal';
+import Skeleton from '../components/Skeleton';
 
 const COLORS = [
   '#4B47B6', // deep purple
@@ -90,6 +91,8 @@ const AdminDashboard: React.FC = () => {
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
 
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -119,6 +122,12 @@ const AdminDashboard: React.FC = () => {
       fetchPenalties();
     }
   }, [jwt]);
+
+  useEffect(() => {
+    if (stats) {
+      setLoading(false);
+    }
+  }, [stats]);
 
   // --- Card 1: Pie chart by writer ---
   // Only show writers who have submissions in the current data for the chart
@@ -262,7 +271,11 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
               {/* Animated Counter */}
-              <AnimatedCounter value={filteredWriterPieData.reduce((sum: number, item: any) => sum + item.value, 0)} className="text-6xl font-extrabold text-[#4B47B6] mb-2 transition-all duration-500" />
+              {loading ? (
+                <Skeleton height={60} width="100%" />
+              ) : (
+                <AnimatedCounter value={filteredWriterPieData.reduce((sum: number, item: any) => sum + item.value, 0)} className="text-6xl font-extrabold text-[#4B47B6] mb-2 transition-all duration-500" />
+              )}
               <span className="mt-1 mb-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold flex items-center animate-fade-in">
                 ↑ 5% this week
               </span>
@@ -323,7 +336,11 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
               {/* Animated Counter */}
-              <AnimatedCounter value={filteredBySubjectCategory.length} className="text-6xl font-extrabold text-[#06d6a0] mb-2 transition-all duration-500" />
+              {loading ? (
+                <Skeleton height={60} width="100%" />
+              ) : (
+                <AnimatedCounter value={filteredBySubjectCategory.length} className="text-6xl font-extrabold text-[#06d6a0] mb-2 transition-all duration-500" />
+              )}
               <span className="mt-1 mb-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold flex items-center animate-fade-in">
                 ↑ 3% this week
               </span>
@@ -403,7 +420,11 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
               {/* Animated Counter */}
-              <AnimatedCounter value={topicPieData.reduce((sum: number, item: any) => sum + item.value, 0)} className="text-6xl font-extrabold text-[#ffd60a] mb-2 transition-all duration-500" />
+              {loading ? (
+                <Skeleton height={60} width="100%" />
+              ) : (
+                <AnimatedCounter value={topicPieData.reduce((sum: number, item: any) => sum + item.value, 0)} className="text-6xl font-extrabold text-[#ffd60a] mb-2 transition-all duration-500" />
+              )}
               <span className="mt-1 mb-2 px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 text-xs font-semibold flex items-center animate-fade-in">
                 ↑ 2% this week
               </span>
@@ -416,48 +437,52 @@ const AdminDashboard: React.FC = () => {
       <div className="bg-white rounded-xl shadow-lg p-8 mb-8 transition hover:shadow-xl">
         <h3 className="text-2xl font-bold mb-6 text-primary text-left">Recent Submissions</h3>
         <div className="overflow-x-auto">
-          <table className="min-w-full table-fixed text-left text-base">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="px-4 py-2 w-[160px] font-semibold text-gray-700">Timestamp</th>
-                <th className="px-4 py-2 w-[160px] font-semibold text-gray-700">Writer</th>
-                <th className="px-4 py-2 w-[300px] font-semibold text-gray-700">Question</th>
-                <th className="px-4 py-2 w-[160px] font-semibold text-gray-700">Subject</th>
-                <th className="px-4 py-2 w-[160px] font-semibold text-gray-700">Topic</th>
-                <th className="px-4 py-2 w-[100px] font-semibold text-gray-700">Status</th>
-                <th className="px-4 py-2 w-[100px] font-semibold text-gray-700">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {allSubmissions.slice(0, 5).map((q: any) => (
-                <tr key={q._id} className="border-t hover:bg-gray-50 transition">
-                  <td className="px-4 py-2 w-[160px] whitespace-nowrap">{new Date(q.createdAt).toLocaleString()}</td>
-                  <td className="px-4 py-2 w-[160px] whitespace-nowrap">{q.writer?.name || '-'}</td>
-                  <td className="px-4 py-2 w-[300px] max-w-[300px] truncate overflow-hidden whitespace-nowrap" title={q.question}>{q.question}</td>
-                  <td className="px-4 py-2 w-[160px] whitespace-nowrap">{q.subject}</td>
-                  <td className="px-4 py-2 w-[160px] whitespace-nowrap">{q.topic}</td>
-                  <td className="px-4 py-2 w-[100px]">
-                    {/* Status badge */}
-                    <span className={`inline-block px-2 py-1 rounded text-xs font-bold
-                      ${q.status === 'approved' ? 'bg-green-100 text-green-700' :
-                        q.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                        'bg-yellow-100 text-yellow-700'}`}
-                    >
-                      {q.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 w-[100px]">
-                    <button
-                      className="bg-primary text-white rounded px-3 py-1 hover:bg-primary-dark transition font-semibold"
-                      onClick={() => handleViewClick(q._id)}
-                    >
-                      View
-                    </button>
-                  </td>
+          {loading ? (
+            <Skeleton height={200} />
+          ) : (
+            <table className="min-w-full table-fixed text-left text-base">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="px-4 py-2 w-[160px] font-semibold text-gray-700">Timestamp</th>
+                  <th className="px-4 py-2 w-[160px] font-semibold text-gray-700">Writer</th>
+                  <th className="px-4 py-2 w-[300px] font-semibold text-gray-700">Question</th>
+                  <th className="px-4 py-2 w-[160px] font-semibold text-gray-700">Subject</th>
+                  <th className="px-4 py-2 w-[160px] font-semibold text-gray-700">Topic</th>
+                  <th className="px-4 py-2 w-[100px] font-semibold text-gray-700">Status</th>
+                  <th className="px-4 py-2 w-[100px] font-semibold text-gray-700">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {allSubmissions.slice(0, 5).map((q: any) => (
+                  <tr key={q._id} className="border-t hover:bg-gray-50 transition">
+                    <td className="px-4 py-2 w-[160px] whitespace-nowrap">{new Date(q.createdAt).toLocaleString()}</td>
+                    <td className="px-4 py-2 w-[160px] whitespace-nowrap">{q.writer?.name || '-'}</td>
+                    <td className="px-4 py-2 w-[300px] max-w-[300px] truncate overflow-hidden whitespace-nowrap" title={q.question}>{q.question}</td>
+                    <td className="px-4 py-2 w-[160px] whitespace-nowrap">{q.subject}</td>
+                    <td className="px-4 py-2 w-[160px] whitespace-nowrap">{q.topic}</td>
+                    <td className="px-4 py-2 w-[100px]">
+                      {/* Status badge */}
+                      <span className={`inline-block px-2 py-1 rounded text-xs font-bold
+                        ${q.status === 'approved' ? 'bg-green-100 text-green-700' :
+                          q.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                          'bg-yellow-100 text-yellow-700'}`}
+                      >
+                        {q.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 w-[100px]">
+                      <button
+                        className="bg-primary text-white rounded px-3 py-1 hover:bg-primary-dark transition font-semibold"
+                        onClick={() => handleViewClick(q._id)}
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
         {/* Modal for viewing submission */}
