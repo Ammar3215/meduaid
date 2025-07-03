@@ -1,22 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { subjectsStructure } from '../utils/subjectsStructure';
-import { FunnelIcon, BookOpenIcon, TagIcon, CheckCircleIcon, XCircleIcon, ClockIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
+import { FunnelIcon, BookOpenIcon, TagIcon, CheckCircleIcon, XCircleIcon, ClockIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import ReactDOM from 'react-dom';
 
-const statusColors: Record<string, string> = {
-  approved: 'bg-green-100 text-green-700',
-  pending: 'bg-yellow-100 text-yellow-700',
-  rejected: 'bg-red-100 text-red-700',
-};
-
-// Helper for avatar initials
-function getInitials(name: string) {
-  if (!name) return '?';
-  const parts = name.split(' ');
-  if (parts.length === 1) return parts[0][0].toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
 const QuestionReview: React.FC = () => {
   const { jwt } = useAuth();
@@ -26,8 +14,6 @@ const QuestionReview: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [fullImage, setFullImage] = useState<string | null>(null);
-  const [viewModal, setViewModal] = useState<{ open: boolean, question: any | null }>({ open: false, question: null });
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [detailsModal, setDetailsModal] = useState<{ open: boolean, question: any | null }>({ open: false, question: null });
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -50,7 +36,7 @@ const QuestionReview: React.FC = () => {
       setLoading(true);
       setError('');
       try {
-        const response = await fetch('http://localhost:5050/api/submissions?status=pending', {
+        const response = await fetch(`${API_BASE_URL}/api/submissions?status=pending`, {
           headers: { Authorization: `Bearer ${jwt}` },
         });
         if (!response.ok) {
@@ -70,7 +56,7 @@ const QuestionReview: React.FC = () => {
 
   const setStatus = async (id: string, status: string) => {
     try {
-      const response = await fetch(`http://localhost:5050/api/submissions/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -103,7 +89,7 @@ const QuestionReview: React.FC = () => {
 
   const saveRejectionReason = async (id: string) => {
     try {
-      const response = await fetch(`http://localhost:5050/api/submissions/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -128,6 +114,14 @@ const QuestionReview: React.FC = () => {
     (selectedSubject === 'All' || q.subject === selectedSubject) &&
     (selectedTopic === 'All' || q.topic === selectedTopic)
   ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  // Restore getInitials helper function
+  function getInitials(name: string) {
+    if (!name) return '?';
+    const parts = name.split(' ');
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -264,12 +258,17 @@ const QuestionReview: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {detailsModal.question.choices?.map((c: string, i: number) => (
-                          <tr key={i} className="border-t">
-                            <td className="px-4 py-2 align-top text-base">{c}</td>
-                            <td className="px-4 py-2 align-top text-base">{detailsModal.question.explanations?.[i]}</td>
-                          </tr>
-                        ))}
+                        {detailsModal.question.choices?.map((_: string, i: number) => {
+                          const isCorrect = detailsModal.question.correctChoice === i;
+                          return (
+                            <tr key={i} className={`border-t ${isCorrect ? 'bg-green-50' : ''}`}>
+                              <td className={`px-4 py-2 align-top text-base ${isCorrect ? 'text-green-700 font-bold' : ''}`}>
+                                {isCorrect && <CheckCircleIcon className="inline w-5 h-5 mr-1 text-green-500 align-text-bottom" />} {detailsModal.question.choices[i]}
+                              </td>
+                              <td className={`px-4 py-2 align-top text-base ${isCorrect ? 'text-green-700 font-semibold' : ''}`}>{detailsModal.question.explanations?.[i]}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -280,10 +279,10 @@ const QuestionReview: React.FC = () => {
                         {detailsModal.question.images.map((img: string, idx: number) => (
                           <img
                             key={idx}
-                            src={`http://localhost:5050${img}`}
+                            src={`${API_BASE_URL}${img}`}
                             alt={`submission-img-${idx}`}
                             className="w-24 h-24 object-cover rounded border cursor-pointer"
-                            onClick={() => setFullImage(`http://localhost:5050${img}`)}
+                            onClick={() => setFullImage(`${API_BASE_URL}${img}`)}
                           />
                         ))}
                       </div>
@@ -313,7 +312,7 @@ const QuestionReview: React.FC = () => {
               <form className="space-y-4 text-left" onSubmit={async (e) => {
                 e.preventDefault();
                 // PATCH updated fields
-                const res = await fetch(`http://localhost:5050/api/submissions/${editData._id}`, {
+                const res = await fetch(`${API_BASE_URL}/api/submissions/${editData._id}`, {
                   method: 'PATCH',
                   headers: {
                     'Content-Type': 'application/json',
@@ -358,7 +357,7 @@ const QuestionReview: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {editData.choices?.map((c: string, i: number) => (
+                      {editData.choices?.map((_: string, i: number) => (
                         <tr key={i} className="border-t">
                           <td className="px-2 py-1 align-top">
                             <input className="w-full px-2 py-1 border rounded" value={editData.choices[i]} onChange={e => setEditData((d: any) => { const arr = [...d.choices]; arr[i] = e.target.value; return { ...d, choices: arr }; })} />

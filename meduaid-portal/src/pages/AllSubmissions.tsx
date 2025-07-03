@@ -11,6 +11,8 @@ interface Submission {
   images?: string[];
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+
 const AllSubmissions: React.FC = () => {
   const { jwt } = useAuth();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -27,7 +29,7 @@ const AllSubmissions: React.FC = () => {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch('http://localhost:5050/api/submissions', {
+        const res = await fetch(`${API_BASE_URL}/api/submissions`, {
           headers: {
             Authorization: `Bearer ${jwt}`,
           },
@@ -52,7 +54,7 @@ const AllSubmissions: React.FC = () => {
     setSelectedSubmission(null);
     setModalOpen(true);
     try {
-      const res = await fetch(`http://localhost:5050/api/submissions/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
         headers: { Authorization: `Bearer ${jwt}` },
       });
       if (!res.ok) {
@@ -183,10 +185,10 @@ const AllSubmissions: React.FC = () => {
                       {selectedSubmission.images.map((img: string, idx: number) => (
                         <img
                           key={idx}
-                          src={`http://localhost:5050${img}`}
+                          src={`${API_BASE_URL}${img}`}
                           alt={`submission-img-${idx}`}
                           className="w-16 h-16 object-cover rounded border cursor-pointer"
-                          onClick={() => setFullImage(`http://localhost:5050${img}`)}
+                          onClick={() => setFullImage(`${API_BASE_URL}${img}`)}
                         />
                       ))}
                     </div>

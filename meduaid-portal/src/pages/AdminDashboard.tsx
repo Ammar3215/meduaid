@@ -40,6 +40,8 @@ const AnimatedCounter = ({ value, className = '' }: { value: number, className?:
   return <div className={className}>{display.toLocaleString()}</div>;
 };
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+
 const AdminDashboard: React.FC = () => {
   const { jwt } = useAuth();
   const [stats, setStats] = useState<any>(null);
@@ -91,7 +93,7 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('http://localhost:5050/api/admin/stats', {
+        const response = await fetch(`${API_BASE_URL}/api/admin/stats`, {
           headers: { Authorization: `Bearer ${jwt}` },
         });
         if (!response.ok) {
@@ -103,7 +105,7 @@ const AdminDashboard: React.FC = () => {
     };
     const fetchPenalties = async () => {
       try {
-        const response = await fetch('http://localhost:5050/api/admin/penalties', {
+        const response = await fetch(`${API_BASE_URL}/api/admin/penalties`, {
           headers: { Authorization: `Bearer ${jwt}` },
         });
         if (response.ok) {
@@ -157,7 +159,7 @@ const AdminDashboard: React.FC = () => {
     setSelectedSubmission(null);
     setModalOpen(true);
     try {
-      const res = await fetch(`http://localhost:5050/api/submissions/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
         headers: { Authorization: `Bearer ${jwt}` },
       });
       if (!res.ok) {
@@ -192,7 +194,7 @@ const AdminDashboard: React.FC = () => {
     setEditLoading(true);
     setEditError('');
     try {
-      const res = await fetch(`http://localhost:5050/api/submissions/${selectedSubmission._id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/submissions/${selectedSubmission._id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

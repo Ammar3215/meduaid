@@ -23,6 +23,8 @@ type AdminQuestionFormInputs = z.infer<typeof questionSchema>;
 
 type Writer = { _id: string; name: string; email: string };
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+
 const AdminQuestionSubmission: React.FC = () => {
   const { jwt } = useAuth();
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -51,7 +53,7 @@ const AdminQuestionSubmission: React.FC = () => {
   useEffect(() => {
     const fetchWriters = async () => {
       try {
-        const res = await fetch('http://localhost:5050/api/admin/writers', {
+        const res = await fetch(`${API_BASE_URL}/api/admin/writers`, {
           headers: { Authorization: `Bearer ${jwt}` },
         });
         if (res.ok) {
@@ -88,7 +90,7 @@ const AdminQuestionSubmission: React.FC = () => {
   const uploadImages = async (files: FileList): Promise<string[]> => {
     const formData = new FormData();
     Array.from(files).forEach(file => formData.append('images', file));
-    const res = await fetch('http://localhost:5050/api/submissions/upload', {
+    const res = await fetch(`${API_BASE_URL}/api/submissions/upload`, {
       method: 'POST',
       body: formData,
     });
@@ -118,7 +120,7 @@ const AdminQuestionSubmission: React.FC = () => {
         images: imageUrls,
         writer: data.writer,
       };
-      const response = await fetch('http://localhost:5050/api/submissions', {
+      const response = await fetch(`${API_BASE_URL}/api/submissions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -164,7 +166,7 @@ const AdminQuestionSubmission: React.FC = () => {
         status: 'draft',
         writer: data.writer,
       };
-      const response = await fetch('http://localhost:5050/api/submissions', {
+      const response = await fetch(`${API_BASE_URL}/api/submissions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

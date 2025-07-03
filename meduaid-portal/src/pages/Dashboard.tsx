@@ -5,6 +5,8 @@ import { subjectsStructure } from '../utils/subjectsStructure';
 import ReactDOM from 'react-dom';
 import { ExclamationCircleIcon } from '@heroicons/react/24/outline';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+
 const Dashboard: React.FC = () => {
   const { jwt, user } = useAuth();
   const navigate = useNavigate();
@@ -53,7 +55,7 @@ const Dashboard: React.FC = () => {
       setLoading(true);
       setError('');
       try {
-        const response = await fetch('http://localhost:5050/api/writer/stats', {
+        const response = await fetch(`${API_BASE_URL}/api/writer/stats`, {
           headers: { Authorization: `Bearer ${jwt}` },
         });
         if (!response.ok) {
@@ -71,7 +73,7 @@ const Dashboard: React.FC = () => {
     };
     const fetchPenalties = async () => {
       try {
-        const response = await fetch('http://localhost:5050/api/writer/penalties', {
+        const response = await fetch(`${API_BASE_URL}/api/writer/penalties`, {
           headers: { Authorization: `Bearer ${jwt}` },
         });
         if (response.ok) {
@@ -105,7 +107,7 @@ const Dashboard: React.FC = () => {
     setSelectedSubmission(null);
     setModalOpen(true);
     try {
-      const res = await fetch(`http://localhost:5050/api/submissions/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
         headers: { Authorization: `Bearer ${jwt}` },
       });
       if (!res.ok) {
@@ -544,10 +546,10 @@ const Dashboard: React.FC = () => {
                             {selectedSubmission.images.map((img: string, idx: number) => (
                               <img
                                 key={idx}
-                                src={`http://localhost:5050${img}`}
+                                src={`${API_BASE_URL}${img}`}
                                 alt={`submission-img-${idx}`}
                                 className="w-16 h-16 object-cover rounded border cursor-pointer"
-                                onClick={() => setFullImage(`http://localhost:5050${img}`)}
+                                onClick={() => setFullImage(`${API_BASE_URL}${img}`)}
                               />
                             ))}
                           </div>
