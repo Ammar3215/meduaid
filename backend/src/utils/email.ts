@@ -10,11 +10,13 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+const frontendBaseUrl = process.env.FRONTEND_BASE_URL || 'http://localhost:5173';
+
 export async function sendVerificationEmail(to: string, token: string) {
   console.log('sendVerificationEmail called with:');
   console.log('To:', to);
   console.log('Token:', token);
-  const verificationUrl = `http://localhost:5173/verify-email?token=${token}`;
+  const verificationUrl = `${frontendBaseUrl}/verify-email?token=${token}`;
   console.log('Verification link:', verificationUrl);
   const info = await transporter.sendMail({
     from: 'no-reply@meduaid.com',

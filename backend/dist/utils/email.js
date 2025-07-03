@@ -22,12 +22,13 @@ const transporter = nodemailer_1.default.createTransport({
         pass: process.env.GMAIL_PASS,
     },
 });
+const frontendBaseUrl = process.env.FRONTEND_BASE_URL || 'http://localhost:5173';
 function sendVerificationEmail(to, token) {
     return __awaiter(this, void 0, void 0, function* () {
         console.log('sendVerificationEmail called with:');
         console.log('To:', to);
         console.log('Token:', token);
-        const verificationUrl = `http://localhost:5173/verify-email?token=${token}`;
+        const verificationUrl = `${frontendBaseUrl}/verify-email?token=${token}`;
         console.log('Verification link:', verificationUrl);
         const info = yield transporter.sendMail({
             from: 'no-reply@meduaid.com',
