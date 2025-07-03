@@ -13,6 +13,7 @@ export interface ISubmission extends Document {
   images: string[];
   status: 'pending' | 'approved' | 'rejected' | 'draft';
   rejectionReason?: string;
+  correctChoice: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,6 +31,7 @@ const SubmissionSchema = new Schema<ISubmission>({
   images: { type: [String], default: [] },
   status: { type: String, enum: ['pending', 'approved', 'rejected', 'draft'], default: 'pending' },
   rejectionReason: { type: String },
+  correctChoice: { type: Number, required: true },
 }, { timestamps: true });
 
 export default mongoose.model<ISubmission>('Submission', SubmissionSchema); 

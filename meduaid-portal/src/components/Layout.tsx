@@ -41,8 +41,9 @@ const Layout: React.FC = () => {
   if (user && user.isAdmin) {
     navLinks = [
       { to: '/', label: 'Dashboard' },
-      { to: '/admin/penalties', label: 'Penalties Management' },
       { to: '/admin/all-submissions', label: 'All Submissions' },
+      { to: '/admin/submit-question', label: 'Submit Question' },
+      { to: '/admin/penalties', label: 'Penalties' },
       { to: '/admin/review', label: 'Question Review' },
     ];
     if (location.pathname === '/verify-email') {

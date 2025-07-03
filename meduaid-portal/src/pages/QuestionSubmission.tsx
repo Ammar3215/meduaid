@@ -6,16 +6,17 @@ import { subjectsStructure } from '../utils/subjectsStructure';
 import { useAuth } from '../context/AuthContext';
 
 const questionSchema = z.object({
-  category: z.string().nonempty(),
-  subject: z.string().nonempty(),
-  topic: z.string().nonempty(),
+  category: z.string().nonempty('Please select a category.'),
+  subject: z.string().nonempty('Please select a subject.'),
+  topic: z.string().nonempty('Please select a topic.'),
   subtopic: z.string().optional(),
-  question: z.string().min(10),
-  choices: z.array(z.string().min(1)).length(5),
-  explanations: z.array(z.string().min(1)).length(5),
-  reference: z.string().min(3),
+  question: z.string().min(10, 'Please enter your question (at least 10 characters).'),
+  choices: z.array(z.string().min(1, 'Each choice is required.')).length(5, 'All 5 choices are required.'),
+  explanations: z.array(z.string().min(1, 'Each explanation is required.')).length(5, 'All 5 explanations are required.'),
+  reference: z.string().min(3, 'Please provide a reference (at least 3 characters).'),
   images: z.any(),
-  difficulty: z.enum(['easy', 'normal', 'hard']),
+  difficulty: z.enum(['easy', 'normal', 'hard'], { errorMap: () => ({ message: 'Please select a difficulty.' }) }),
+  correctChoice: z.number().min(0, 'Please select which choice is correct.').max(4, 'Please select which choice is correct.'),
 });
 
 type QuestionFormInputs = z.infer<typeof questionSchema>;
@@ -39,6 +40,7 @@ const QuestionSubmission: React.FC = () => {
       choices: ['', '', '', '', ''],
       explanations: ['', '', '', '', ''],
       difficulty: 'normal',
+      correctChoice: 0,
     },
   });
 
@@ -96,6 +98,7 @@ const QuestionSubmission: React.FC = () => {
         reference: data.reference,
         difficulty: data.difficulty,
         images: imageUrls,
+        correctChoice: data.correctChoice,
       };
       const response = await fetch('http://localhost:5050/api/submissions', {
         method: 'POST',
@@ -143,6 +146,7 @@ const QuestionSubmission: React.FC = () => {
         difficulty: data.difficulty,
         images: imageUrls,
         status: 'draft',
+        correctChoice: data.correctChoice,
       };
       const response = await fetch('http://localhost:5050/api/submissions', {
         method: 'POST',
@@ -229,15 +233,25 @@ const QuestionSubmission: React.FC = () => {
                 className="w-full px-4 py-2 border rounded-lg mb-1"
                 placeholder={`Choice ${String.fromCharCode(65 + i)}`}
               />
+              {errors.choices?.[i] && <p className="text-red-500 text-sm mt-1">Choice {String.fromCharCode(65 + i)} is required.</p>}
               <input
                 {...register(`explanations.${i}` as const)}
                 className="w-full px-4 py-2 border rounded-lg"
                 placeholder={`Explanation for Choice ${String.fromCharCode(65 + i)}`}
               />
+              {errors.explanations?.[i] && <p className="text-red-500 text-sm mt-1">Explanation for Choice {String.fromCharCode(65 + i)} is required.</p>}
             </div>
           ))}
-          {errors.choices && <p className="text-red-500 text-sm mt-1">All choices are required.</p>}
-          {errors.explanations && <p className="text-red-500 text-sm mt-1">All explanations are required.</p>}
+        </div>
+        {/* Correct Choice Dropdown */}
+        <div>
+          <label className="block mb-1 font-medium">Correct Choice</label>
+          <select {...register('correctChoice', { valueAsNumber: true })} className="w-full px-4 py-2 border rounded-lg">
+            {['A', 'B', 'C', 'D', 'E'].map((label, idx) => (
+              <option key={idx} value={idx}>{label}</option>
+            ))}
+          </select>
+          {errors.correctChoice && <p className="text-red-500 text-sm mt-1">Please select which choice is correct (A–E).</p>}
         </div>
         {/* Image Uploader */}
         <div>

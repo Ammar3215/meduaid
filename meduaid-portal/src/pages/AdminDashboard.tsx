@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { subjectsStructure } from '../utils/subjectsStructure';
+import QuestionViewModal from '../components/QuestionViewModal';
 
 const COLORS = [
   '#4B47B6', // deep purple
@@ -47,7 +48,6 @@ const AdminDashboard: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState('');
-  const [fullImage, setFullImage] = useState<string | null>(null);
 
   // Prepare data for dropdowns
   const allSubmissions = stats?.allSubmissions || [];
@@ -243,21 +243,21 @@ const AdminDashboard: React.FC = () => {
               <div className="flex flex-col items-center mb-6 w-full max-w-xs animate-fade-in">
                 <label className="text-xs text-gray-700 mb-1 self-start">Writer</label>
                 <div className="relative w-full">
-                <select
+                  <select
                     className="appearance-none w-full px-4 py-2 rounded-lg border border-[#4B47B6] text-[#4B47B6] font-semibold focus:ring-2 focus:ring-[#4B47B6] focus:border-[#4B47B6] transition bg-white/90 shadow-sm hover:border-[#4B47B6] hover:shadow-md"
-                  value={writerFilter}
-                  onChange={e => setWriterFilter(e.target.value)}
+                    value={writerFilter}
+                    onChange={e => setWriterFilter(e.target.value)}
                     style={{paddingRight: '2.5rem'}}
-                >
-                  <option value="All">All</option>
+                  >
+                    <option value="All">All</option>
                     {Array.from(new Set(allSubmissions.map((q: any) => q.writer?.name).filter(Boolean))).map((name) => (
                       <option key={name as string} value={name as string}>{name as string}</option>
-                  ))}
-                </select>
+                    ))}
+                  </select>
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#4B47B6]">
                     <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="#4B47B6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </span>
-              </div>
+                </div>
               </div>
               {/* Animated Counter */}
               <AnimatedCounter value={filteredWriterPieData.reduce((sum: number, item: any) => sum + item.value, 0)} className="text-6xl font-extrabold text-[#4B47B6] mb-2 transition-all duration-500" />
@@ -267,6 +267,7 @@ const AdminDashboard: React.FC = () => {
             </div>
           </div>
         </div>
+
         {/* Card 2: Questions by Subject (Dropdowns Above Counter, Compact Height, No Details) */}
         <div className="relative rounded-2xl shadow-2xl overflow-hidden group transition-all duration-300 flex flex-col items-stretch justify-start h-full" style={{background: 'linear-gradient(135deg, #06d6a0 0%, #90ee90 100%)', boxShadow: '0 12px 40px rgba(0,0,0,0.12)', border: '1.5px solid #e3e6f0', minHeight: '320px'}}>
           <div className="absolute left-0 top-0 h-full w-2 bg-[#06d6a0]" />
@@ -276,24 +277,24 @@ const AdminDashboard: React.FC = () => {
             <div className="flex items-center mb-6 w-full justify-center">
               <span className="inline-block w-2 h-6 rounded-full mr-3" style={{background: '#06d6a0'}}></span>
               <h2 className="text-2xl font-bold text-[#2d3748] tracking-tight">Questions by Subject</h2>
-              </div>
+            </div>
             <div className="flex flex-col items-center justify-center w-full">
               {/* Dropdown Filters (Category, Subject) */}
               <div className="flex flex-wrap justify-center gap-4 mb-6 w-full max-w-2xl animate-fade-in">
                 <div className="flex flex-col items-center w-1/2 min-w-[160px]">
                   <label className="text-xs text-gray-700 mb-1 self-start">Category</label>
                   <div className="relative w-full">
-                <select
+                    <select
                       className="appearance-none w-full px-4 py-2 rounded-lg border border-[#06d6a0] text-[#06d6a0] font-semibold focus:ring-2 focus:ring-[#06d6a0] focus:border-[#06d6a0] transition bg-white/90 shadow-sm hover:border-[#06d6a0] hover:shadow-md"
-                  value={subjectCategoryFilter}
+                      value={subjectCategoryFilter}
                       onChange={e => { setSubjectCategoryFilter(e.target.value); setSubjectFilter('All'); }}
                       style={{paddingRight: '2.5rem'}}
                     >
                       <option value="All">All</option>
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+                      {categories.map((cat) => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#06d6a0]">
                       <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="#06d6a0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </span>
@@ -302,22 +303,22 @@ const AdminDashboard: React.FC = () => {
                 <div className="flex flex-col items-center w-1/2 min-w-[160px]">
                   <label className="text-xs text-gray-700 mb-1 self-start">Subject</label>
                   <div className="relative w-full">
-                <select
+                    <select
                       className="appearance-none w-full px-4 py-2 rounded-lg border border-[#06d6a0] text-[#06d6a0] font-semibold focus:ring-2 focus:ring-[#06d6a0] focus:border-[#06d6a0] transition bg-white/90 shadow-sm hover:border-[#06d6a0] hover:shadow-md"
-                  value={subjectFilter}
-                  onChange={e => setSubjectFilter(e.target.value)}
+                      value={subjectFilter}
+                      onChange={e => setSubjectFilter(e.target.value)}
                       style={{paddingRight: '2.5rem'}}
-                >
-                  <option value="All">All</option>
-                  {subjectsForSubjectCard.map((subject) => (
+                    >
+                      <option value="All">All</option>
+                      {subjectsForSubjectCard.map((subject) => (
                         <option key={subject as string} value={subject as string}>{subject as string}</option>
-                  ))}
-                </select>
+                      ))}
+                    </select>
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#06d6a0]">
                       <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="#06d6a0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </span>
                   </div>
-              </div>
+                </div>
               </div>
               {/* Animated Counter */}
               <AnimatedCounter value={filteredBySubjectCategory.length} className="text-6xl font-extrabold text-[#06d6a0] mb-2 transition-all duration-500" />
@@ -327,6 +328,7 @@ const AdminDashboard: React.FC = () => {
             </div>
           </div>
         </div>
+
         {/* Card 3: Questions by Topic (Dropdowns Above Counter, Compact Height, No Details) */}
         <div className="relative rounded-2xl shadow-2xl overflow-hidden group transition-all duration-300 flex flex-col items-stretch justify-start h-full" style={{background: 'linear-gradient(135deg, #ffd60a 0%, #ffef8a 100%)', boxShadow: '0 12px 40px rgba(0,0,0,0.12)', border: '1.5px solid #e3e6f0', minHeight: '320px'}}>
           <div className="absolute left-0 top-0 h-full w-2 bg-[#ffd60a]" />
@@ -336,24 +338,24 @@ const AdminDashboard: React.FC = () => {
             <div className="flex items-center mb-6 w-full justify-center">
               <span className="inline-block w-2 h-6 rounded-full mr-3" style={{background: '#ffd60a'}}></span>
               <h2 className="text-2xl font-bold text-[#2d3748] tracking-tight">Questions by Topic</h2>
-              </div>
+            </div>
             <div className="flex flex-col items-center justify-center w-full">
               {/* Dropdown Filters (Category, Subject, Topic) */}
               <div className="flex flex-wrap justify-center gap-4 mb-6 w-full max-w-3xl animate-fade-in">
                 <div className="flex flex-col items-center w-1/3 min-w-[160px]">
                   <label className="text-xs text-gray-700 mb-1 self-start">Category</label>
                   <div className="relative w-full">
-                <select
+                    <select
                       className="appearance-none w-full px-4 py-2 rounded-lg border border-[#ffd60a] text-[#ffd60a] font-semibold focus:ring-2 focus:ring-[#ffd60a] focus:border-[#ffd60a] transition bg-white/90 shadow-sm hover:border-[#ffd60a] hover:shadow-md"
-                  value={topicCategoryFilter}
+                      value={topicCategoryFilter}
                       onChange={e => { setTopicCategoryFilter(e.target.value); setTopicSubjectFilter('All'); setTopicFilter('All'); }}
                       style={{paddingRight: '2.5rem'}}
                     >
                       <option value="All">All</option>
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+                      {categories.map((cat) => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#ffd60a]">
                       <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="#ffd60a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </span>
@@ -362,17 +364,17 @@ const AdminDashboard: React.FC = () => {
                 <div className="flex flex-col items-center w-1/3 min-w-[160px]">
                   <label className="text-xs text-gray-700 mb-1 self-start">Subject</label>
                   <div className="relative w-full">
-                <select
+                    <select
                       className="appearance-none w-full px-4 py-2 rounded-lg border border-[#ffd60a] text-[#ffd60a] font-semibold focus:ring-2 focus:ring-[#ffd60a] focus:border-[#ffd60a] transition bg-white/90 shadow-sm hover:border-[#ffd60a] hover:shadow-md"
-                  value={topicSubjectFilter}
+                      value={topicSubjectFilter}
                       onChange={e => { setTopicSubjectFilter(e.target.value); setTopicFilter('All'); }}
                       style={{paddingRight: '2.5rem'}}
-                >
-                  <option value="All">All</option>
-                  {subjectsForTopicCard.map((subject) => (
+                    >
+                      <option value="All">All</option>
+                      {subjectsForTopicCard.map((subject) => (
                         <option key={subject as string} value={subject as string}>{subject as string}</option>
-                  ))}
-                </select>
+                      ))}
+                    </select>
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#ffd60a]">
                       <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="#ffd60a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </span>
@@ -381,22 +383,22 @@ const AdminDashboard: React.FC = () => {
                 <div className="flex flex-col items-center w-1/3 min-w-[160px]">
                   <label className="text-xs text-gray-700 mb-1 self-start">Topic</label>
                   <div className="relative w-full">
-                <select
+                    <select
                       className="appearance-none w-full px-4 py-2 rounded-lg border border-[#ffd60a] text-[#ffd60a] font-semibold focus:ring-2 focus:ring-[#ffd60a] focus:border-[#ffd60a] transition bg-white/90 shadow-sm hover:border-[#ffd60a] hover:shadow-md"
-                  value={topicFilter}
-                  onChange={e => setTopicFilter(e.target.value)}
+                      value={topicFilter}
+                      onChange={e => setTopicFilter(e.target.value)}
                       style={{paddingRight: '2.5rem'}}
-                >
-                  <option value="All">All</option>
+                    >
+                      <option value="All">All</option>
                       {uniqueTopics.map((topic) => (
                         <option key={topic as string} value={topic as string}>{topic as string}</option>
-                  ))}
-                </select>
+                      ))}
+                    </select>
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#ffd60a]">
                       <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="#ffd60a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </span>
                   </div>
-              </div>
+                </div>
               </div>
               {/* Animated Counter */}
               <AnimatedCounter value={topicPieData.reduce((sum: number, item: any) => sum + item.value, 0)} className="text-6xl font-extrabold text-[#ffd60a] mb-2 transition-all duration-500" />
@@ -404,247 +406,170 @@ const AdminDashboard: React.FC = () => {
                 ↑ 2% this week
               </span>
             </div>
-              </div>
-            </div>
           </div>
-          {/* Recent Submissions Table */}
-          <div className="bg-white rounded-xl shadow-lg p-8 mb-8 transition hover:shadow-xl">
-            <h3 className="text-2xl font-bold mb-6 text-primary text-left">Recent Submissions</h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full table-fixed text-left text-base">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="px-4 py-2 w-[160px] font-semibold text-gray-700">Timestamp</th>
-                    <th className="px-4 py-2 w-[160px] font-semibold text-gray-700">Writer</th>
-                    <th className="px-4 py-2 w-[300px] font-semibold text-gray-700">Question</th>
-                    <th className="px-4 py-2 w-[160px] font-semibold text-gray-700">Subject</th>
-                    <th className="px-4 py-2 w-[160px] font-semibold text-gray-700">Topic</th>
-                    <th className="px-4 py-2 w-[100px] font-semibold text-gray-700">Status</th>
-                    <th className="px-4 py-2 w-[100px] font-semibold text-gray-700">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {allSubmissions.slice(0, 5).map((q: any) => (
-                    <tr key={q._id} className="border-t hover:bg-gray-50 transition">
-                      <td className="px-4 py-2 w-[160px] whitespace-nowrap">{new Date(q.createdAt).toLocaleString()}</td>
-                      <td className="px-4 py-2 w-[160px] whitespace-nowrap">{q.writer?.name || '-'}</td>
-                      <td className="px-4 py-2 w-[300px] max-w-[300px] truncate overflow-hidden whitespace-nowrap" title={q.question}>{q.question}</td>
-                      <td className="px-4 py-2 w-[160px] whitespace-nowrap">{q.subject}</td>
-                      <td className="px-4 py-2 w-[160px] whitespace-nowrap">{q.topic}</td>
-                      <td className="px-4 py-2 w-[100px]">
-                        {/* Status badge */}
-                        <span className={`inline-block px-2 py-1 rounded text-xs font-bold
-                          ${q.status === 'approved' ? 'bg-green-100 text-green-700' :
-                            q.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                            'bg-yellow-100 text-yellow-700'}`}
-                        >
-                          {q.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 w-[100px]">
-                        <button
-                          className="bg-primary text-white rounded px-3 py-1 hover:bg-primary-dark transition font-semibold"
-                          onClick={() => handleViewClick(q._id)}
-                        >
-                          View
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {/* Modal for viewing submission */}
-            {modalOpen && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-                <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-lg relative max-h-[90vh] flex flex-col">
-                  <button
-                    className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold"
-                    onClick={() => { setModalOpen(false); setIsEditing(false); setEditData(null); }}
-                  >
-                    &times;
-                  </button>
-                  <h3 className="text-2xl font-bold mb-4 text-primary">Question Details</h3>
-                  <div className="overflow-y-auto flex-1 pr-2" style={{ maxHeight: '60vh' }}>
-                    {modalLoading ? (
-                      <div className="text-center text-gray-500">Loading...</div>
-                    ) : modalError ? (
-                      <div className="text-center text-red-500">{modalError}</div>
-                    ) : selectedSubmission ? (
-                      isEditing ? (
-                        <form className="space-y-4 text-left" onSubmit={e => { e.preventDefault(); handleSaveEdit(); }}>
-                          <div>
-                            <label className="font-semibold block mb-1">Subject:</label>
-                            <input type="text" className="w-full border rounded px-2 py-1" value={editData.subject} onChange={e => setEditData({ ...editData, subject: e.target.value })} required />
-                          </div>
-                          <div>
-                            <label className="font-semibold block mb-1">Topic:</label>
-                            <input type="text" className="w-full border rounded px-2 py-1" value={editData.topic} onChange={e => setEditData({ ...editData, topic: e.target.value })} required />
-                          </div>
-                          <div>
-                            <label className="font-semibold block mb-1">Question:</label>
-                            <textarea className="w-full border rounded px-2 py-1" value={editData.question} onChange={e => setEditData({ ...editData, question: e.target.value })} required rows={3} />
-                          </div>
-                          <div>
-                            <label className="font-semibold block mb-1">Choices:</label>
-                            {editData.choices?.map((c: string, i: number) => (
-                              <div key={i} className="flex gap-2 mb-1">
-                                <input type="text" className="flex-1 border rounded px-2 py-1" value={c} onChange={e => {
-                                  const newChoices = [...editData.choices];
-                                  newChoices[i] = e.target.value;
-                                  setEditData({ ...editData, choices: newChoices });
-                                }} required />
-                                <button type="button" className="text-red-500 font-bold" onClick={() => {
-                                  const newChoices = editData.choices.filter((_: any, idx: number) => idx !== i);
-                                  setEditData({ ...editData, choices: newChoices });
-                                }}>×</button>
-                              </div>
-                            ))}
-                            <button type="button" className="text-primary font-semibold mt-1" onClick={() => setEditData({ ...editData, choices: [...(editData.choices || []), ''] })}>+ Add Choice</button>
-                          </div>
-                          <div>
-                            <label className="font-semibold block mb-1">Explanations:</label>
-                            {editData.explanations?.map((e: string, i: number) => (
-                              <div key={i} className="flex gap-2 mb-1">
-                                <input type="text" className="flex-1 border rounded px-2 py-1" value={e} onChange={ev => {
-                                  const newExps = [...editData.explanations];
-                                  newExps[i] = ev.target.value;
-                                  setEditData({ ...editData, explanations: newExps });
-                                }} required />
-                                <button type="button" className="text-red-500 font-bold" onClick={() => {
-                                  const newExps = editData.explanations.filter((_: any, idx: number) => idx !== i);
-                                  setEditData({ ...editData, explanations: newExps });
-                                }}>×</button>
-                              </div>
-                            ))}
-                            <button type="button" className="text-primary font-semibold mt-1" onClick={() => setEditData({ ...editData, explanations: [...(editData.explanations || []), ''] })}>+ Add Explanation</button>
-                          </div>
-                          <div>
-                            <label className="font-semibold block mb-1">Reference:</label>
-                            <input type="text" className="w-full border rounded px-2 py-1" value={editData.reference} onChange={e => setEditData({ ...editData, reference: e.target.value })} />
-                          </div>
-                          <div>
-                            <label className="font-semibold block mb-1">Rejection Reason:</label>
-                            <input type="text" className="w-full border rounded px-2 py-1" value={editData.rejectionReason || ''} onChange={e => setEditData({ ...editData, rejectionReason: e.target.value })} />
-                          </div>
-                          {editError && <div className="text-red-500 text-sm">{editError}</div>}
-                          <div className="flex justify-end gap-2 mt-4">
-                            <button type="button" className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition" onClick={handleCancelEdit} disabled={editLoading}>Cancel</button>
-                            <button type="submit" className="px-4 py-2 rounded bg-primary text-white font-semibold hover:bg-primary-dark transition disabled:opacity-60" disabled={editLoading}>{editLoading ? 'Saving...' : 'Save'}</button>
-                          </div>
-                        </form>
-                      ) : (
-                        <div className="space-y-2 text-left">
-                          <div><span className="font-semibold">Subject:</span> {selectedSubmission.subject}</div>
-                          <div><span className="font-semibold">Topic:</span> {selectedSubmission.topic}</div>
-                          <div><span className="font-semibold">Question:</span> {selectedSubmission.question}</div>
-                          <div><span className="font-semibold">Choices:</span>
-                            <ul className="list-disc pl-6">
-                              {selectedSubmission.choices?.map((c: string, i: number) => (
-                                <li key={i}>{c}</li>
-                              ))}
-                            </ul>
-                          </div>
-                          <div><span className="font-semibold">Explanations:</span>
-                            <ul className="list-disc pl-6">
-                              {selectedSubmission.explanations?.map((e: string, i: number) => (
-                                <li key={i}>{e}</li>
-                              ))}
-                            </ul>
-                          </div>
-                          <div><span className="font-semibold">Reference:</span> {selectedSubmission.reference}</div>
-                          <div><span className="font-semibold">Status:</span> <span className={`inline-block px-2 py-1 rounded text-xs font-bold
-                            ${selectedSubmission.status === 'approved' ? 'bg-green-100 text-green-700' :
-                              selectedSubmission.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                              'bg-yellow-100 text-yellow-700'}`}>{selectedSubmission.status}</span></div>
-                          <div><span className="font-semibold">Rejection Reason:</span> {selectedSubmission.rejectionReason || '-'}</div>
-                          <div><span className="font-semibold">Submitted At:</span> {new Date(selectedSubmission.createdAt).toLocaleString()}</div>
-                          <div><span className="font-semibold">Last Updated:</span> {new Date(selectedSubmission.updatedAt).toLocaleString()}</div>
-                          {selectedSubmission.images && selectedSubmission.images.length > 0 && (
-                            <div>
-                              <span className="font-semibold">Images:</span>
-                              <div className="flex gap-2 flex-wrap mt-2">
-                                {selectedSubmission.images.map((img: string, idx: number) => (
-                                  <img
-                                    key={idx}
-                                    src={`http://localhost:5050${img}`}
-                                    alt={`submission-img-${idx}`}
-                                    className="w-16 h-16 object-cover rounded border cursor-pointer hover:scale-110 transition"
-                                    onClick={() => setFullImage(`http://localhost:5050${img}`)}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    ) : null}
-                  </div>
-                  <div className="flex justify-end gap-2 mt-6">
-                    {!isEditing && (
-                      <button
-                        className="px-4 py-2 rounded bg-primary text-white font-semibold hover:bg-primary-dark transition"
-                        onClick={handleEditClick}
-                      >
-                        Edit
-                      </button>
-                    )}
-                    {isEditing && (
-                      <button
-                        type="button"
-                        className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition"
-                        onClick={handleCancelEdit}
-                        disabled={editLoading}
-                      >
-                        Cancel
-                      </button>
-                    )}
-                    <button
-                      className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-dark transition"
-                      onClick={() => { setModalOpen(false); setIsEditing(false); setEditData(null); }}
+        </div>
+      </div>
+
+      {/* Recent Submissions Table */}
+      <div className="bg-white rounded-xl shadow-lg p-8 mb-8 transition hover:shadow-xl">
+        <h3 className="text-2xl font-bold mb-6 text-primary text-left">Recent Submissions</h3>
+        <div className="overflow-x-auto">
+          <table className="min-w-full table-fixed text-left text-base">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="px-4 py-2 w-[160px] font-semibold text-gray-700">Timestamp</th>
+                <th className="px-4 py-2 w-[160px] font-semibold text-gray-700">Writer</th>
+                <th className="px-4 py-2 w-[300px] font-semibold text-gray-700">Question</th>
+                <th className="px-4 py-2 w-[160px] font-semibold text-gray-700">Subject</th>
+                <th className="px-4 py-2 w-[160px] font-semibold text-gray-700">Topic</th>
+                <th className="px-4 py-2 w-[100px] font-semibold text-gray-700">Status</th>
+                <th className="px-4 py-2 w-[100px] font-semibold text-gray-700">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {allSubmissions.slice(0, 5).map((q: any) => (
+                <tr key={q._id} className="border-t hover:bg-gray-50 transition">
+                  <td className="px-4 py-2 w-[160px] whitespace-nowrap">{new Date(q.createdAt).toLocaleString()}</td>
+                  <td className="px-4 py-2 w-[160px] whitespace-nowrap">{q.writer?.name || '-'}</td>
+                  <td className="px-4 py-2 w-[300px] max-w-[300px] truncate overflow-hidden whitespace-nowrap" title={q.question}>{q.question}</td>
+                  <td className="px-4 py-2 w-[160px] whitespace-nowrap">{q.subject}</td>
+                  <td className="px-4 py-2 w-[160px] whitespace-nowrap">{q.topic}</td>
+                  <td className="px-4 py-2 w-[100px]">
+                    {/* Status badge */}
+                    <span className={`inline-block px-2 py-1 rounded text-xs font-bold
+                      ${q.status === 'approved' ? 'bg-green-100 text-green-700' :
+                        q.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                        'bg-yellow-100 text-yellow-700'}`}
                     >
-                      Close
+                      {q.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 w-[100px]">
+                    <button
+                      className="bg-primary text-white rounded px-3 py-1 hover:bg-primary-dark transition font-semibold"
+                      onClick={() => handleViewClick(q._id)}
+                    >
+                      View
                     </button>
-                  </div>
-                </div>
-                {/* Fullscreen image overlay */}
-                {fullImage && (
-                  <div className="fixed inset-0 z-60 flex items-center justify-center bg-black bg-opacity-90" onClick={() => setFullImage(null)}>
-                    <img src={fullImage} alt="full" className="max-h-[90vh] max-w-[90vw] rounded shadow-lg" />
-                    <button className="absolute top-8 right-8 text-white text-4xl font-bold" onClick={() => setFullImage(null)}>&times;</button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          {/* Recent Penalties Table */}
-          <div className="bg-white rounded-xl shadow-lg p-8 mb-8 transition hover:shadow-xl">
-            <h3 className="text-2xl font-bold mb-6 text-accent text-left">Recent Penalties</h3>
-            <table className="w-full text-left text-base">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="py-2 font-semibold text-gray-700">Timestamp</th>
-                  <th className="py-2 font-semibold text-gray-700">Writer</th>
-                  <th className="py-2 font-semibold text-gray-700">Reason</th>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {penalties.length === 0 ? (
-                  <tr><td colSpan={3} className="text-center text-gray-400">No recent penalties.</td></tr>
-                ) : (
-                  penalties.map((p: any) => (
-                    <tr key={p._id} className="border-t hover:bg-gray-50 transition">
-                      <td className="py-2">{new Date(p.createdAt).toLocaleString()}</td>
-                      <td>{p.writer?.name || '-'}</td>
-                      <td>{p.reason}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Modal for viewing submission */}
+        {modalOpen && (
+          <QuestionViewModal
+            open={modalOpen}
+            onClose={() => { setModalOpen(false); setIsEditing(false); setEditData(null); }}
+            question={selectedSubmission}
+            loading={modalLoading}
+            error={modalError}
+          >
+            {!isEditing && selectedSubmission && (
+              <button
+                className="px-4 py-2 rounded bg-primary text-white font-semibold hover:bg-primary-dark transition"
+                onClick={handleEditClick}
+              >
+                Edit
+              </button>
+            )}
+            {isEditing && (
+              <form className="space-y-4 text-left" onSubmit={e => { e.preventDefault(); handleSaveEdit(); }}>
+                <div>
+                  <label className="font-semibold block mb-1">Subject:</label>
+                  <input type="text" className="w-full border rounded px-2 py-1" value={editData.subject} onChange={e => setEditData({ ...editData, subject: e.target.value })} required />
+                </div>
+                <div>
+                  <label className="font-semibold block mb-1">Topic:</label>
+                  <input type="text" className="w-full border rounded px-2 py-1" value={editData.topic} onChange={e => setEditData({ ...editData, topic: e.target.value })} required />
+                </div>
+                <div>
+                  <label className="font-semibold block mb-1">Question:</label>
+                  <textarea className="w-full border rounded px-2 py-1" value={editData.question} onChange={e => setEditData({ ...editData, question: e.target.value })} required rows={3} />
+                </div>
+                <div>
+                  <label className="font-semibold block mb-1">Choices:</label>
+                  {editData.choices?.map((c: string, i: number) => (
+                    <div key={i} className="flex gap-2 mb-1">
+                      <input type="text" className="flex-1 border rounded px-2 py-1" value={c} onChange={e => {
+                        const newChoices = [...editData.choices];
+                        newChoices[i] = e.target.value;
+                        setEditData({ ...editData, choices: newChoices });
+                      }} required />
+                      <button type="button" className="text-red-500 font-bold" onClick={() => {
+                        const newChoices = editData.choices.filter((_: any, idx: number) => idx !== i);
+                        setEditData({ ...editData, choices: newChoices });
+                      }}>×</button>
+                    </div>
+                  ))}
+                  <button type="button" className="text-primary font-semibold mt-1" onClick={() => setEditData({ ...editData, choices: [...(editData.choices || []), ''] })}>+ Add Choice</button>
+                </div>
+                <div>
+                  <label className="font-semibold block mb-1">Explanations:</label>
+                  {editData.explanations?.map((e: string, i: number) => (
+                    <div key={i} className="flex gap-2 mb-1">
+                      <input type="text" className="flex-1 border rounded px-2 py-1" value={e} onChange={ev => {
+                        const newExps = [...editData.explanations];
+                        newExps[i] = ev.target.value;
+                        setEditData({ ...editData, explanations: newExps });
+                      }} required />
+                      <button type="button" className="text-red-500 font-bold" onClick={() => {
+                        const newExps = editData.explanations.filter((_: any, idx: number) => idx !== i);
+                        setEditData({ ...editData, explanations: newExps });
+                      }}>×</button>
+                    </div>
+                  ))}
+                  <button type="button" className="text-primary font-semibold mt-1" onClick={() => setEditData({ ...editData, explanations: [...(editData.explanations || []), ''] })}>+ Add Explanation</button>
+                </div>
+                <div>
+                  <label className="font-semibold block mb-1">Reference:</label>
+                  <input type="text" className="w-full border rounded px-2 py-1" value={editData.reference} onChange={e => setEditData({ ...editData, reference: e.target.value })} />
+                </div>
+                <div>
+                  <label className="font-semibold block mb-1">Rejection Reason:</label>
+                  <input type="text" className="w-full border rounded px-2 py-1" value={editData.rejectionReason || ''} onChange={e => setEditData({ ...editData, rejectionReason: e.target.value })} />
+                </div>
+                {editError && <div className="text-red-500 text-sm">{editError}</div>}
+                <div className="flex justify-end gap-2 mt-4">
+                  <button type="button" className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition" onClick={handleCancelEdit} disabled={editLoading}>Cancel</button>
+                  <button type="submit" className="px-4 py-2 rounded bg-primary text-white font-semibold hover:bg-primary-dark transition disabled:opacity-60" disabled={editLoading}>{editLoading ? 'Saving...' : 'Save'}</button>
+                </div>
+              </form>
+            )}
+          </QuestionViewModal>
+        )}
+      </div>
+
+      {/* Recent Penalties Table */}
+      <div className="bg-white rounded-xl shadow-lg p-8 mb-8 transition hover:shadow-xl">
+        <h3 className="text-2xl font-bold mb-6 text-accent text-left">Recent Penalties</h3>
+        <table className="w-full text-left text-base">
+          <thead>
+            <tr className="bg-gray-50">
+              <th className="py-2 font-semibold text-gray-700">Timestamp</th>
+              <th className="py-2 font-semibold text-gray-700">Writer</th>
+              <th className="py-2 font-semibold text-gray-700">Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            {penalties.length === 0 ? (
+              <tr><td colSpan={3} className="text-center text-gray-400">No recent penalties.</td></tr>
+            ) : (
+              penalties.map((p: any) => (
+                <tr key={p._id} className="border-t hover:bg-gray-50 transition">
+                  <td className="py-2">{new Date(p.createdAt).toLocaleString()}</td>
+                  <td>{p.writer?.name || '-'}</td>
+                  <td>{p.reason}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
 
-export default AdminDashboard; 
+export default AdminDashboard;
