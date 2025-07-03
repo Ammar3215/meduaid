@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import Skeleton from '../components/Skeleton';
 
 interface Submission {
   _id: string;
@@ -74,7 +75,12 @@ const AllSubmissions: React.FC = () => {
     <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-lg p-8 mt-8">
       {/* Removed All My Submissions header as requested */}
       {loading ? (
-        <div className="text-center">Loading...</div>
+        <div className="flex flex-col gap-4">
+          <Skeleton height={40} />
+          <Skeleton height={200} />
+          <Skeleton height={40} width="60%" />
+          <Skeleton height={40} width="80%" />
+        </div>
       ) : error ? (
         <div className="text-red-500 text-center">{error}</div>
       ) : submissions.length === 0 ? (
