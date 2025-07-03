@@ -127,7 +127,7 @@ const QuestionReview: React.FC = () => {
     (selectedCategory === 'All' || q.category === selectedCategory) &&
     (selectedSubject === 'All' || q.subject === selectedSubject) &&
     (selectedTopic === 'All' || q.topic === selectedTopic)
-  );
+  ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -222,52 +222,52 @@ const QuestionReview: React.FC = () => {
       )}
       {detailsModal.open && detailsModal.question && ReactDOM.createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-2xl relative max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-lg p-10 w-full max-w-4xl relative max-h-[90vh] overflow-y-auto">
             <button
               className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold"
               onClick={() => { setDetailsModal({ open: false, question: null }); setEditReasonId(null); setIsEditing(false); setEditData(null); }}
             >
               &times;
             </button>
-            <h3 className="text-xl font-bold mb-4 text-primary">Question Details</h3>
+            <h3 className="text-2xl font-bold mb-6 text-primary">Question Details</h3>
             {!isEditing ? (
               <>
-                <div className="space-y-4 text-left">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <div className="mb-2"><span className="font-semibold">Writer:</span> {detailsModal.question.writer?.name || '-'}</div>
-                      <div className="mb-2"><span className="font-semibold">Subject:</span> {detailsModal.question.subject}</div>
-                      <div className="mb-2"><span className="font-semibold">Topic:</span> {detailsModal.question.topic}</div>
-                      <div className="mb-2"><span className="font-semibold">Reference:</span> {detailsModal.question.reference}</div>
+                <div className="space-y-6 text-left">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-3">
+                      <div><span className="font-semibold">Writer:</span> {detailsModal.question.writer?.name || '-'}</div>
+                      <div><span className="font-semibold">Subject:</span> {detailsModal.question.subject}</div>
+                      <div><span className="font-semibold">Topic:</span> {detailsModal.question.topic}</div>
+                      <div><span className="font-semibold">Reference:</span> {detailsModal.question.reference}</div>
                     </div>
-                    <div>
-                      <div className="mb-2"><span className="font-semibold">Status:</span> <span className={`inline-block px-2 py-1 rounded text-xs font-bold
+                    <div className="space-y-3">
+                      <div><span className="font-semibold">Status:</span> <span className={`inline-block px-2 py-1 rounded text-xs font-bold
                         ${detailsModal.question.status === 'approved' ? 'bg-green-100 text-green-700' :
                           detailsModal.question.status === 'rejected' ? 'bg-red-100 text-red-700' :
                           'bg-yellow-100 text-yellow-700'}`}>{detailsModal.question.status}</span></div>
-                      <div className="mb-2"><span className="font-semibold">Rejection Reason:</span> {detailsModal.question.rejectionReason || '-'}</div>
-                      <div className="mb-2"><span className="font-semibold">Submitted At:</span> {new Date(detailsModal.question.createdAt).toLocaleString()}</div>
-                      <div className="mb-2"><span className="font-semibold">Last Updated:</span> {new Date(detailsModal.question.updatedAt).toLocaleString()}</div>
+                      <div><span className="font-semibold">Rejection Reason:</span> {detailsModal.question.rejectionReason || '-'}</div>
+                      <div><span className="font-semibold">Submitted At:</span> {new Date(detailsModal.question.createdAt).toLocaleString()}</div>
+                      <div><span className="font-semibold">Last Updated:</span> {new Date(detailsModal.question.updatedAt).toLocaleString()}</div>
                     </div>
                   </div>
                   <div className="mb-2">
                     <span className="font-semibold">Question:</span>
-                    <div className="mt-1 bg-gray-50 rounded p-3 border text-gray-800">{detailsModal.question.question}</div>
+                    <div className="mt-2 bg-gray-50 rounded p-4 border text-gray-800 text-base whitespace-pre-line">{detailsModal.question.question}</div>
                   </div>
                   <div>
                     <span className="font-semibold">Choices & Explanations:</span>
-                    <table className="w-full mt-2 border rounded bg-gray-50">
+                    <table className="w-full mt-3 border rounded bg-gray-50">
                       <thead>
                         <tr>
-                          <th className="px-2 py-1 text-left font-semibold text-gray-700">Choice</th>
-                          <th className="px-2 py-1 text-left font-semibold text-gray-700">Explanation</th>
+                          <th className="px-4 py-2 text-left font-semibold text-gray-700">Choice</th>
+                          <th className="px-4 py-2 text-left font-semibold text-gray-700">Explanation</th>
                         </tr>
                       </thead>
                       <tbody>
                         {detailsModal.question.choices?.map((c: string, i: number) => (
                           <tr key={i} className="border-t">
-                            <td className="px-2 py-1 align-top">{c}</td>
-                            <td className="px-2 py-1 align-top">{detailsModal.question.explanations?.[i]}</td>
+                            <td className="px-4 py-2 align-top text-base">{c}</td>
+                            <td className="px-4 py-2 align-top text-base">{detailsModal.question.explanations?.[i]}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -276,20 +276,20 @@ const QuestionReview: React.FC = () => {
                   {detailsModal.question.images && detailsModal.question.images.length > 0 && (
                     <div>
                       <span className="font-semibold">Images:</span>
-                      <div className="flex gap-2 flex-wrap mt-2">
+                      <div className="flex gap-4 flex-wrap mt-3">
                         {detailsModal.question.images.map((img: string, idx: number) => (
                           <img
                             key={idx}
                             src={`http://localhost:5050${img}`}
                             alt={`submission-img-${idx}`}
-                            className="w-16 h-16 object-cover rounded border cursor-pointer"
+                            className="w-24 h-24 object-cover rounded border cursor-pointer"
                             onClick={() => setFullImage(`http://localhost:5050${img}`)}
                           />
                         ))}
                       </div>
                     </div>
                   )}
-                  <div className="flex flex-wrap gap-2 mt-4">
+                  <div className="flex flex-wrap gap-2 mt-8">
                     <button onClick={() => { setStatus(detailsModal.question._id, 'approved'); setDetailsModal({ ...detailsModal, open: false }); }} className="bg-green-500 text-white px-4 py-1.5 rounded font-semibold text-xs hover:bg-green-600 transition flex items-center gap-1"><CheckCircleIcon className="w-4 h-4" /> Approve</button>
                     <button onClick={() => { setEditReasonId(detailsModal.question._id); }} className="bg-red-500 text-white px-4 py-1.5 rounded font-semibold text-xs hover:bg-red-600 transition flex items-center gap-1"><XCircleIcon className="w-4 h-4" /> Reject</button>
                     <button onClick={() => { setStatus(detailsModal.question._id, 'pending'); setDetailsModal({ ...detailsModal, open: false }); }} className="bg-yellow-500 text-white px-4 py-1.5 rounded font-semibold text-xs hover:bg-yellow-600 transition flex items-center gap-1"><ClockIcon className="w-4 h-4" /> Pending</button>

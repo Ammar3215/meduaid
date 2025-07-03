@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { subjectsStructure } from '../utils/subjectsStructure';
 import { useAuth } from '../context/AuthContext';
 import { FunnelIcon, UserGroupIcon, CalendarDaysIcon, BookOpenIcon, TagIcon } from '@heroicons/react/24/outline';
+import QuestionViewModal from '../components/QuestionViewModal';
 
 const categories = Object.keys(subjectsStructure);
 
@@ -329,111 +330,34 @@ const AllAdminSubmissions: React.FC = () => {
         )}
         {/* Modal for viewing submission */}
         {modalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-            <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-lg relative max-h-[90vh] overflow-y-auto">
+          <QuestionViewModal
+            open={modalOpen}
+            onClose={() => setModalOpen(false)}
+            question={selectedSubmission}
+            loading={modalLoading}
+            error={modalError}
+          >
+            {modalMode === 'view' && selectedSubmission && (
               <button
-                className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold"
-                onClick={() => setModalOpen(false)}
+                className="px-4 py-2 rounded bg-primary text-white font-semibold hover:bg-primary-dark transition"
+                onClick={() => setModalMode('edit')}
               >
-                &times;
+                Edit
               </button>
-              <h3 className="text-xl font-bold mb-4 text-primary">Question Details</h3>
-              {modalLoading ? (
-                <div className="text-center text-gray-500">Loading...</div>
-              ) : modalError ? (
-                <div className="text-center text-red-500">{modalError}</div>
-              ) : selectedSubmission ? (
-                modalMode === 'edit' ? (
-                  <AdminEditQuestionForm
-                    submission={selectedSubmission}
-                    onClose={() => setModalMode('view')}
-                    onSave={updated => {
-                      setQuestions(prev => prev.map(q => q._id === updated._id ? updated : q));
-                      setSelectedSubmission(updated);
-                      setModalMode('view');
-                    }}
-                    jwt={jwt || ''}
-                  />
-                ) : (
-                  <>
-                    <div className="space-y-2 text-left">
-                      <div><span className="font-semibold">Category:</span> {selectedSubmission.category}</div>
-                      <div><span className="font-semibold">Subject:</span> {selectedSubmission.subject}</div>
-                      <div><span className="font-semibold">Topic:</span> {selectedSubmission.topic}</div>
-                      <div><span className="font-semibold">Question:</span> {selectedSubmission.question}</div>
-                      <div><span className="font-semibold">Choices:</span>
-                        <ul className="list-disc pl-6">
-                          {selectedSubmission.choices?.map((c: string, i: number) => (
-                            <li key={i}>{c}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div><span className="font-semibold">Explanations:</span>
-                        <ul className="list-disc pl-6">
-                          {selectedSubmission.explanations?.map((e: string, i: number) => (
-                            <li key={i}>{e}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div><span className="font-semibold">Reference:</span> {selectedSubmission.reference}</div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">Status:</span>
-                        <select
-                          className="border rounded px-2 py-1 text-sm"
-                          value={selectedSubmission.status}
-                          onChange={e => handleModalStatusChange(e.target.value)}
-                        >
-                          <option value="approved">Approved</option>
-                          <option value="pending">Pending</option>
-                          <option value="rejected">Rejected</option>
-                        </select>
-                      </div>
-                      <div><span className="font-semibold">Rejection Reason:</span> {selectedSubmission.rejectionReason || '-'}</div>
-                      <div><span className="font-semibold">Submitted At:</span> {new Date(selectedSubmission.createdAt).toLocaleString()}</div>
-                      <div><span className="font-semibold">Last Updated:</span> {new Date(selectedSubmission.updatedAt).toLocaleString()}</div>
-                      {selectedSubmission.images && selectedSubmission.images.length > 0 && (
-                        <div>
-                          <span className="font-semibold">Images:</span>
-                          <div className="flex gap-2 flex-wrap mt-2">
-                            {selectedSubmission.images.map((img: string, idx: number) => (
-                              <img
-                                key={idx}
-                                src={`http://localhost:5050${img}`}
-                                alt={`submission-img-${idx}`}
-                                className="w-16 h-16 object-cover rounded border cursor-pointer"
-                                onClick={() => setFullImage(`http://localhost:5050${img}`)}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex justify-end gap-2 mt-6">
-                      <button
-                        className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-dark transition"
-                        onClick={() => setModalMode('edit')}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-400 transition"
-                        onClick={() => setModalOpen(false)}
-                      >
-                        Close
-                      </button>
-                    </div>
-                  </>
-                )
-              ) : null}
-            </div>
-            {/* Fullscreen image overlay */}
-            {fullImage && (
-              <div className="fixed inset-0 z-60 flex items-center justify-center bg-black bg-opacity-90" onClick={() => setFullImage(null)}>
-                <img src={fullImage} alt="full" className="max-h-[90vh] max-w-[90vw] rounded shadow-lg" />
-                <button className="absolute top-8 right-8 text-white text-4xl font-bold" onClick={() => setFullImage(null)}>&times;</button>
-              </div>
             )}
-          </div>
+            {modalMode === 'edit' && selectedSubmission && (
+              <AdminEditQuestionForm
+                submission={selectedSubmission}
+                onClose={() => setModalMode('view')}
+                onSave={updated => {
+                  setQuestions(prev => prev.map(q => q._id === updated._id ? updated : q));
+                  setSelectedSubmission(updated);
+                  setModalMode('view');
+                }}
+                jwt={jwt || ''}
+              />
+            )}
+          </QuestionViewModal>
         )}
       </div>
     </div>

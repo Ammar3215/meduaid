@@ -13,6 +13,7 @@ import QuestionReview from './pages/QuestionReview'
 import AllSubmissions from './pages/AllSubmissions'
 import Settings from './pages/Settings'
 import AllAdminSubmissions from './pages/AllAdminSubmissions'
+import AdminQuestionSubmission from './pages/AdminQuestionSubmission'
 import { useAuth } from './context/AuthContext'
 
 function App() {
@@ -40,6 +41,7 @@ function App() {
             <Route path="admin/penalties" element={<PenaltiesManagement />} />
             <Route path="admin/review" element={<QuestionReview />} />
             <Route path="admin/all-submissions" element={<AllAdminSubmissions />} />
+            <Route path="admin/submit-question" element={<AdminQuestionSubmission />} />
           </Route>
           {/* All Submissions Route */}
           <Route path="all-submissions" element={<AllSubmissions />} />

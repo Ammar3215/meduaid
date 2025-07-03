@@ -4,8 +4,13 @@ import Submission from '../models/Submission';
 // Writer submits a question
 export const createSubmission: RequestHandler = async (req, res) => {
   try {
-    const { category, subject, topic, question, choices, explanations, reference, difficulty, images, status } = req.body;
-    const writerId = (req as any).user?.id;
+    const { category, subject, topic, question, choices, explanations, reference, difficulty, images, status, writer, correctChoice } = req.body;
+    let writerId = (req as any).user?.id;
+    const user = (req as any).user;
+    // If admin and writer is provided, use that
+    if (user?.role === 'admin' && writer) {
+      writerId = writer;
+    }
     const submission = await Submission.create({
       writer: writerId,
       category,
@@ -18,6 +23,7 @@ export const createSubmission: RequestHandler = async (req, res) => {
       difficulty,
       images: images || [],
       status: status === 'draft' ? 'draft' : 'pending',
+      correctChoice,
     });
     res.status(201).json(submission);
   } catch (err) {
