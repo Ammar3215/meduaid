@@ -21,6 +21,8 @@ const questionSchema = z.object({
 
 type QuestionFormInputs = z.infer<typeof questionSchema>;
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+
 const QuestionSubmission: React.FC = () => {
   const { jwt } = useAuth();
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -69,7 +71,7 @@ const QuestionSubmission: React.FC = () => {
   const uploadImages = async (files: FileList): Promise<string[]> => {
     const formData = new FormData();
     Array.from(files).forEach(file => formData.append('images', file));
-    const res = await fetch('http://localhost:5050/api/submissions/upload', {
+    const res = await fetch(`${API_BASE_URL}/api/submissions/upload`, {
       method: 'POST',
       body: formData,
     });
@@ -100,7 +102,7 @@ const QuestionSubmission: React.FC = () => {
         images: imageUrls,
         correctChoice: data.correctChoice,
       };
-      const response = await fetch('http://localhost:5050/api/submissions', {
+      const response = await fetch(`${API_BASE_URL}/api/submissions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -148,7 +150,7 @@ const QuestionSubmission: React.FC = () => {
         status: 'draft',
         correctChoice: data.correctChoice,
       };
-      const response = await fetch('http://localhost:5050/api/submissions', {
+      const response = await fetch(`${API_BASE_URL}/api/submissions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

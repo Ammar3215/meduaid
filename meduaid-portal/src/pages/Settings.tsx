@@ -14,6 +14,8 @@ const Settings: React.FC = () => {
     email: '',
   });
 
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+
   useEffect(() => {
     if (user) {
       setUserData({
@@ -29,7 +31,7 @@ const Settings: React.FC = () => {
     setMessage('');
     setError('');
     try {
-      const response = await fetch('http://localhost:5050/api/auth/update-profile', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/update-profile`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -70,7 +72,7 @@ const Settings: React.FC = () => {
     }
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5050/api/auth/change-password', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

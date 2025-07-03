@@ -30,6 +30,8 @@ function Tooltip({ children, text }: { children: React.ReactNode, text: string }
   );
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+
 const AllAdminSubmissions: React.FC = () => {
   const { jwt } = useAuth();
   const [category, setCategory] = useState(categories[0]);
@@ -51,7 +53,6 @@ const AllAdminSubmissions: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState('');
-  const [fullImage, setFullImage] = useState<string | null>(null);
   const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
 
   useEffect(() => {
@@ -59,7 +60,7 @@ const AllAdminSubmissions: React.FC = () => {
       setLoading(true);
       setError('');
       try {
-        const response = await fetch('http://localhost:5050/api/submissions', {
+        const response = await fetch(`${API_BASE_URL}/api/submissions`, {
           headers: { Authorization: `Bearer ${jwt}` },
         });
         if (!response.ok) {
@@ -85,7 +86,7 @@ const AllAdminSubmissions: React.FC = () => {
   };
   const handleSaveReason = async (id: string, reason: string) => {
     try {
-      const response = await fetch(`http://localhost:5050/api/submissions/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -107,7 +108,7 @@ const AllAdminSubmissions: React.FC = () => {
     setModalOpen(true);
     setModalMode('view');
     try {
-      const res = await fetch(`http://localhost:5050/api/submissions/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
         headers: { Authorization: `Bearer ${jwt}` },
       });
       if (!res.ok) {
@@ -121,25 +122,6 @@ const AllAdminSubmissions: React.FC = () => {
       setModalError('Network error.');
     }
     setModalLoading(false);
-  };
-
-  // Add status change handler
-  const handleModalStatusChange = async (newStatus: string) => {
-    if (!selectedSubmission) return;
-    try {
-      const response = await fetch(`http://localhost:5050/api/submissions/${selectedSubmission._id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${jwt}`,
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (response.ok) {
-        setQuestions(prev => prev.map(q => q._id === selectedSubmission._id ? { ...q, status: newStatus } : q));
-        setSelectedSubmission({ ...selectedSubmission, status: newStatus });
-      }
-    } catch {}
   };
 
   const filtered = questions.filter(q =>
@@ -399,7 +381,7 @@ function AdminEditQuestionForm({ submission, onClose, onSave, jwt }: { submissio
         reference: form.reference,
         difficulty: form.difficulty,
       };
-      const res = await fetch(`http://localhost:5050/api/submissions/${form._id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/submissions/${form._id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -488,9 +470,8 @@ function AdminEditQuestionForm({ submission, onClose, onSave, jwt }: { submissio
             {form.images.map((img: string, idx: number) => (
               <img
                 key={idx}
-                src={`http://localhost:5050${img}`}
+                src={`${API_BASE_URL}${img}`}
                 alt={`submission-img-${idx}`}
-                className="w-16 h-16 object-cover rounded border cursor-pointer"
               />
             ))}
           </div>
@@ -505,4 +486,4 @@ function AdminEditQuestionForm({ submission, onClose, onSave, jwt }: { submissio
   );
 }
 
-export default AllAdminSubmissions; 
+export default AllAdminSubmissions;

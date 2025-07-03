@@ -10,6 +10,8 @@ interface QuestionViewModalProps {
   children?: React.ReactNode;
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+
 const QuestionViewModal: React.FC<QuestionViewModalProps> = ({ open, onClose, question, loading, error, children }) => {
   if (!open) return null;
   return (
@@ -84,7 +86,7 @@ const QuestionViewModal: React.FC<QuestionViewModalProps> = ({ open, onClose, qu
                   {question.images.map((img: string, idx: number) => (
                     <img
                       key={idx}
-                      src={`http://localhost:5050${img}`}
+                      src={`${API_BASE_URL}${img}`}
                       alt={`submission-img-${idx}`}
                       className="w-24 h-24 object-cover rounded border cursor-pointer"
                     />
@@ -108,4 +110,4 @@ const QuestionViewModal: React.FC<QuestionViewModalProps> = ({ open, onClose, qu
   );
 };
 
-export default QuestionViewModal; 
+export default QuestionViewModal;

@@ -33,12 +33,14 @@ const EditQuestions: React.FC = () => {
     },
   });
 
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+
   useEffect(() => {
     const fetchQuestions = async () => {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch('http://localhost:5050/api/submissions?status=rejected,draft', {
+        const res = await fetch(`${API_BASE_URL}/api/submissions?status=rejected,draft`, {
           headers: { Authorization: `Bearer ${jwt}` },
         });
         if (!res.ok) throw new Error('Failed to fetch questions');
@@ -67,7 +69,7 @@ const EditQuestions: React.FC = () => {
       reference: q.reference,
       images: null,
     });
-    setImagePreviews((q.images || []).map((img: string) => `http://localhost:5050${img}`));
+    setImagePreviews((q.images || []).map((img: string) => `${API_BASE_URL}${img}`));
     setFormImages(null);
   };
 
@@ -85,7 +87,7 @@ const EditQuestions: React.FC = () => {
         data.explanations.forEach((e: string, i: number) => formData.append(`explanations[${i}]`, e));
         formData.append('reference', data.reference);
         formData.append('status', data.status === 'draft' ? 'draft' : 'pending');
-        const res = await fetch(`http://localhost:5050/api/submissions/${editingId}`, {
+        const res = await fetch(`${API_BASE_URL}/api/submissions/${editingId}`, {
           method: 'PATCH',
           headers: { Authorization: `Bearer ${jwt}` },
           body: formData,
@@ -93,7 +95,7 @@ const EditQuestions: React.FC = () => {
         if (!res.ok) throw new Error('Failed to update question');
       } else {
         // No image change
-        const res = await fetch(`http://localhost:5050/api/submissions/${editingId}`, {
+        const res = await fetch(`${API_BASE_URL}/api/submissions/${editingId}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -142,7 +144,7 @@ const EditQuestions: React.FC = () => {
                   {q.images.map((img: string, idx: number) => (
                     <img
                       key={idx}
-                      src={`http://localhost:5050${img}`}
+                      src={`${API_BASE_URL}${img}`}
                       alt={`submission-img-${idx}`}
                       className="w-16 h-16 object-cover rounded border"
                     />

@@ -39,6 +39,8 @@ const PenaltiesManagement: React.FC = () => {
   const [reasonError, setReasonError] = useState('');
   const [amountError, setAmountError] = useState('');
 
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+
   useEffect(() => {
     if (user && !user.isAdmin) {
       navigate('/', { replace: true });
@@ -50,7 +52,7 @@ const PenaltiesManagement: React.FC = () => {
       setError('');
       try {
         // Fetch writers
-        const writersRes = await fetch('http://localhost:5050/api/admin/writers', {
+        const writersRes = await fetch(`${API_BASE_URL}/api/admin/writers`, {
           headers: { Authorization: `Bearer ${jwt}` },
         });
         if (!writersRes.ok) throw new Error('Failed to fetch writers.');
@@ -58,7 +60,7 @@ const PenaltiesManagement: React.FC = () => {
         setWriters(writersData);
 
         // Fetch penalties
-        const penaltiesRes = await fetch('http://localhost:5050/api/admin/penalties', {
+        const penaltiesRes = await fetch(`${API_BASE_URL}/api/admin/penalties`, {
           headers: { Authorization: `Bearer ${jwt}` },
         });
         if (!penaltiesRes.ok) throw new Error('Failed to fetch penalties.');
@@ -97,7 +99,7 @@ const PenaltiesManagement: React.FC = () => {
     if (hasError) return;
     setError('');
     try {
-      const res = await fetch('http://localhost:5050/api/admin/penalties', {
+      const res = await fetch(`${API_BASE_URL}/api/admin/penalties`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -128,7 +130,7 @@ const PenaltiesManagement: React.FC = () => {
 
   const handleRemovePenalty = async (id: string) => {
     try {
-      const res = await fetch(`http://localhost:5050/api/admin/penalties/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/admin/penalties/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${jwt}` },
       });
