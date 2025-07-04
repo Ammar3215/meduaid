@@ -163,7 +163,7 @@ const PenaltiesManagement: React.FC = () => {
               <select
                 value={selectedWriter}
                 onChange={e => setSelectedWriter(e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary focus:border-primary transition-all duration-150 ${writerError ? 'border-red-500 ring-1 ring-red-400' : ''}`}
+                className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary focus:border-primary transition-all duration-150 ${writerError ? 'border-red-500 ring-1 ring-red-400' : ''} bg-white text-gray-900`}
               >
                 <option value="">Select Writer</option>
                 {writers.map(w => <option key={w._id} value={w._id}>{w.name} ({w.email})</option>)}
@@ -177,7 +177,7 @@ const PenaltiesManagement: React.FC = () => {
             </div>
             <div className="w-full">
               <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-              <select value={penaltyType} onChange={e => setPenaltyType(e.target.value)} className="w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary focus:border-primary">
+              <select value={penaltyType} onChange={e => setPenaltyType(e.target.value)} className="w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary focus:border-primary bg-white text-gray-900">
                 <option value="strike">Strike</option>
                 <option value="monetary">Monetary</option>
               </select>
@@ -190,7 +190,7 @@ const PenaltiesManagement: React.FC = () => {
                   placeholder="e.g., 50"
                   value={amount}
                   onChange={e => setAmount(e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary focus:border-primary transition-all duration-150 ${amountError ? 'border-red-500 ring-1 ring-red-400' : ''}`}
+                  className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary focus:border-primary transition-all duration-150 ${amountError ? 'border-red-500 ring-1 ring-red-400' : ''} bg-white text-gray-900`}
                 />
                 {amountError && (
                   <div className="flex items-center gap-1 text-red-600 text-xs mt-1 animate-fade-in">
@@ -207,7 +207,7 @@ const PenaltiesManagement: React.FC = () => {
                 placeholder="Reason for penalty"
                 value={reason}
                 onChange={e => setReason(e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary focus:border-primary transition-all duration-150 ${reasonError ? 'border-red-500 ring-1 ring-red-400' : ''}`}
+                className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-primary focus:border-primary transition-all duration-150 ${reasonError ? 'border-red-500 ring-1 ring-red-400' : ''} bg-white text-gray-900`}
               />
               {reasonError && (
                 <div className="flex items-center gap-1 text-red-600 text-xs mt-1 animate-fade-in">
@@ -229,14 +229,14 @@ const PenaltiesManagement: React.FC = () => {
           <div className="flex flex-col md:flex-row flex-wrap gap-2 md:gap-4 mb-4 items-end">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Writer</label>
-              <select value={filterWriter} onChange={e => setFilterWriter(e.target.value)} className="px-2 py-1 border rounded">
+              <select value={filterWriter} onChange={e => setFilterWriter(e.target.value)} className="px-2 py-1 border rounded bg-white text-gray-900">
                 <option value="All">All</option>
                 {writers.map(w => <option key={w._id} value={w._id}>{w.name} ({w.email})</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
-              <select value={filterType} onChange={e => setFilterType(e.target.value)} className="px-2 py-1 border rounded">
+              <select value={filterType} onChange={e => setFilterType(e.target.value)} className="px-2 py-1 border rounded bg-white text-gray-900">
                 <option value="All">All</option>
                 <option value="strike">Strike</option>
                 <option value="monetary">Monetary</option>

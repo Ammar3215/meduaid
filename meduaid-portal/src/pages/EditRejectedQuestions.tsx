@@ -178,7 +178,7 @@ const EditQuestions: React.FC = () => {
                 <form onSubmit={handleSubmit(onSubmit)} className="mt-4 bg-white rounded-xl shadow-inner p-4 flex flex-col gap-4">
                   <div>
                     <label className="block mb-1 font-medium">Question</label>
-                    <textarea {...register('question', { required: 'Question is required', minLength: { value: 10, message: 'At least 10 characters' } })} className="w-full px-4 py-2 border rounded-lg min-h-[80px]" />
+                    <textarea {...register('question', { required: 'Question is required', minLength: { value: 10, message: 'At least 10 characters' } })} className="w-full px-4 py-2 border rounded-lg min-h-[80px] bg-white text-gray-900" />
                     {errors.question && <div className="text-red-500 text-xs mt-1">{errors.question.message}</div>}
                   </div>
                   <div>
@@ -197,7 +197,7 @@ const EditQuestions: React.FC = () => {
                               <td className="px-2 py-1 align-top">
                                 <input
                                   {...register(`choices.${i}` as const, { required: 'Required' })}
-                                  className="w-full px-2 py-1 border rounded"
+                                  className="w-full px-2 py-1 border rounded bg-white text-gray-900"
                                   placeholder={`Choice ${String.fromCharCode(65 + i)}`}
                                 />
                                 {errors.choices?.[i] && <div className="text-red-500 text-xs mt-1">{(errors.choices[i] as any)?.message}</div>}
@@ -205,7 +205,7 @@ const EditQuestions: React.FC = () => {
                               <td className="px-2 py-1 align-top">
                                 <input
                                   {...register(`explanations.${i}` as const, { required: 'Required' })}
-                                  className="w-full px-2 py-1 border rounded"
+                                  className="w-full px-2 py-1 border rounded bg-white text-gray-900"
                                   placeholder={`Explain Choice ${String.fromCharCode(65 + i)}`}
                                 />
                                 {errors.explanations?.[i] && <div className="text-red-500 text-xs mt-1">{(errors.explanations[i] as any)?.message}</div>}
@@ -218,7 +218,7 @@ const EditQuestions: React.FC = () => {
                   </div>
                   <div>
                     <label className="block mb-1 font-medium">Reference</label>
-                    <input {...register('reference', { required: 'Reference is required' })} className="w-full px-4 py-2 border rounded-lg" />
+                    <input {...register('reference', { required: 'Reference is required' })} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900" />
                     {errors.reference && <div className="text-red-500 text-xs mt-1">{errors.reference.message}</div>}
                   </div>
                   <div>

@@ -175,7 +175,7 @@ const AllAdminSubmissions: React.FC = () => {
               <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700">
                 <TagIcon className="w-4 h-4 text-primary" /> Category
               </label>
-              <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary" value={category} onChange={e => { setCategory(e.target.value); setSubject('All'); setTopic('All'); }}>
+              <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900" value={category} onChange={e => { setCategory(e.target.value); setSubject('All'); setTopic('All'); }}>
                 {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
               </select>
             </div>
@@ -183,7 +183,7 @@ const AllAdminSubmissions: React.FC = () => {
               <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700">
                 <BookOpenIcon className="w-4 h-4 text-primary" /> Subject
               </label>
-              <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary" value={subject} onChange={e => { setSubject(e.target.value); setTopic('All'); }}>
+              <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900" value={subject} onChange={e => { setSubject(e.target.value); setTopic('All'); }}>
                 <option value="All">All</option>
                 {subjects.map(subj => <option key={subj} value={subj}>{subj}</option>)}
               </select>
@@ -192,7 +192,7 @@ const AllAdminSubmissions: React.FC = () => {
               <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700">
                 <FunnelIcon className="w-4 h-4 text-primary" /> Topic
               </label>
-              <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary" value={topic} onChange={e => setTopic(e.target.value)}>
+              <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900" value={topic} onChange={e => setTopic(e.target.value)}>
                 <option value="All">All</option>
                 {(topics as string[]).map((t: string) => <option key={t} value={t}>{t}</option>)}
               </select>
@@ -201,7 +201,7 @@ const AllAdminSubmissions: React.FC = () => {
               <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700">
                 <UserGroupIcon className="w-4 h-4 text-primary" /> Writer
               </label>
-              <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary" value={writer} onChange={e => setWriter(e.target.value)}>
+              <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900" value={writer} onChange={e => setWriter(e.target.value)}>
                 <option value="All">All</option>
                 {writers.map(w => <option key={w} value={w}>{w}</option>)}
               </select>
@@ -210,7 +210,7 @@ const AllAdminSubmissions: React.FC = () => {
               <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700">
                 <CalendarDaysIcon className="w-4 h-4 text-primary" /> Date
               </label>
-              <input type="date" className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary" value={date} onChange={e => setDate(e.target.value)} />
+              <input type="date" className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900" value={date} onChange={e => setDate(e.target.value)} />
             </div>
           </div>
         </div>
@@ -280,7 +280,7 @@ const AllAdminSubmissions: React.FC = () => {
                           <>
                             <input
                               type="text"
-                              className="border rounded px-2 py-1 w-full mb-1"
+                              className="border rounded px-2 py-1 w-full mb-1 bg-white text-gray-900"
                               value={q.rejectionReason || ''}
                               onChange={e => handleReasonChange(q._id, e.target.value)}
                               placeholder="Enter reason"
@@ -405,27 +405,27 @@ function AdminEditQuestionForm({ submission, onClose, onSave, jwt }: { submissio
     <form className="space-y-4" onSubmit={e => { e.preventDefault(); handleSave(); }}>
       <div>
         <label className="block mb-1 font-medium">Category</label>
-        <select value={form.category} onChange={e => handleChange('category', e.target.value)} className="w-full px-4 py-2 border rounded-lg">
+        <select value={form.category} onChange={e => handleChange('category', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900">
           {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
         </select>
       </div>
       <div>
         <label className="block mb-1 font-medium">Subject</label>
-        <select value={form.subject} onChange={e => handleChange('subject', e.target.value)} className="w-full px-4 py-2 border rounded-lg">
+        <select value={form.subject} onChange={e => handleChange('subject', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900">
           <option value="">Select Subject</option>
           {subjects.map(subj => <option key={subj} value={subj}>{subj}</option>)}
         </select>
       </div>
       <div>
         <label className="block mb-1 font-medium">Topic</label>
-        <select value={form.topic} onChange={e => handleChange('topic', e.target.value)} className="w-full px-4 py-2 border rounded-lg">
+        <select value={form.topic} onChange={e => handleChange('topic', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900">
           <option value="">Select Topic</option>
           {(topics as string[]).map(topic => <option key={topic} value={topic}>{topic}</option>)}
         </select>
       </div>
       <div>
         <label className="block mb-1 font-medium">Question</label>
-        <textarea value={form.question} onChange={e => handleChange('question', e.target.value)} className="w-full px-4 py-2 border rounded-lg min-h-[80px]" />
+        <textarea value={form.question} onChange={e => handleChange('question', e.target.value)} className="w-full px-4 py-2 border rounded-lg min-h-[80px] bg-white text-gray-900" />
       </div>
       <div>
         <label className="block mb-1 font-medium">Choices (A–E)</label>
@@ -434,7 +434,7 @@ function AdminEditQuestionForm({ submission, onClose, onSave, jwt }: { submissio
             key={i}
             value={form.choices[i] || ''}
             onChange={e => handleArrayChange('choices', i, e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg mb-2"
+            className="w-full px-4 py-2 border rounded-lg mb-2 bg-white text-gray-900"
             placeholder={`Choice ${String.fromCharCode(65 + i)}`}
           />
         ))}
@@ -446,18 +446,18 @@ function AdminEditQuestionForm({ submission, onClose, onSave, jwt }: { submissio
             key={i}
             value={form.explanations[i] || ''}
             onChange={e => handleArrayChange('explanations', i, e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg mb-2"
+            className="w-full px-4 py-2 border rounded-lg mb-2 bg-white text-gray-900"
             placeholder={`Explain Choice ${String.fromCharCode(65 + i)}`}
           />
         ))}
       </div>
       <div>
         <label className="block mb-1 font-medium">Reference</label>
-        <input value={form.reference} onChange={e => handleChange('reference', e.target.value)} className="w-full px-4 py-2 border rounded-lg" />
+        <input value={form.reference} onChange={e => handleChange('reference', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900" />
       </div>
       <div>
         <label className="block mb-1 font-medium">Difficulty</label>
-        <select value={form.difficulty || 'normal'} onChange={e => handleChange('difficulty', e.target.value)} className="w-full px-4 py-2 border rounded-lg">
+        <select value={form.difficulty || 'normal'} onChange={e => handleChange('difficulty', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900">
           <option value="easy">Easy</option>
           <option value="normal">Normal</option>
           <option value="hard">Hard</option>
