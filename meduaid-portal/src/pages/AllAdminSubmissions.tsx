@@ -165,12 +165,12 @@ const AllAdminSubmissions: React.FC = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="w-full max-w-full max-w-6xl mx-auto px-2 sm:px-6">
       {/* Main Content Section */}
-      <div className="bg-white rounded-xl shadow-lg p-8">
+      <div className="bg-white rounded-xl shadow-lg p-2 sm:p-8">
         {/* Enhanced Filters Section */}
         <div className="mb-8">
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 flex flex-wrap gap-6 items-end shadow-sm">
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-2 sm:p-6 flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-6 items-end shadow-sm">
             <div className="flex flex-col min-w-[160px]">
               <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700">
                 <TagIcon className="w-4 h-4 text-primary" /> Category
@@ -232,7 +232,7 @@ const AllAdminSubmissions: React.FC = () => {
           <div className="flex justify-center items-center min-h-[120px] text-center text-gray-300">No data to be displayed.</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-left rounded-xl overflow-hidden bg-white">
+            <table className="min-w-[600px] w-full text-left rounded-xl overflow-hidden bg-white text-sm sm:text-base">
               <thead>
                 <tr className="bg-gray-100 text-gray-700">
                   <th className="py-3 px-6 font-semibold">Timestamp</th>

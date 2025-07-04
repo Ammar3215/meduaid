@@ -235,10 +235,11 @@ const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full max-w-full px-2 sm:px-4">
       {/* Add spacing between menu and cards */}
       <div className="mb-6" />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 w-full max-w-[1400px] mx-auto" style={{gridAutoRows: '1fr'}}>
+      {/* Responsive grid for cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8 w-full max-w-full mx-auto" style={{gridAutoRows: '1fr'}}>
         {/* Card 1: Total Questions by Writer (Dropdowns Above Counter, Compact Height, No Details) */}
         <div className="relative rounded-2xl shadow-2xl overflow-hidden group transition-all duration-300 flex flex-col items-stretch justify-start h-full" style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', boxShadow: '0 12px 40px rgba(0,0,0,0.12)', border: '1.5px solid #e3e6f0', minHeight: '320px'}}>
           <div className="absolute left-0 top-0 h-full w-2 bg-[#4B47B6]" />
@@ -440,7 +441,7 @@ const AdminDashboard: React.FC = () => {
           {loading ? (
             <Skeleton height={200} />
           ) : (
-            <table className="min-w-full table-fixed text-left text-base">
+            <table className="min-w-[600px] w-full text-left rounded-xl overflow-hidden bg-white text-sm sm:text-base">
               <thead>
                 <tr className="bg-gray-50">
                   <th className="px-4 py-2 w-[160px] font-semibold text-gray-700">Timestamp</th>
