@@ -113,7 +113,7 @@ const Settings: React.FC = () => {
               id="name"
               value={userData.name}
               onChange={(e) => setUserData({ ...userData, name: e.target.value })}
-              className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary text-gray-900"
             />
           </div>
           <div>
@@ -123,7 +123,7 @@ const Settings: React.FC = () => {
               id="email"
               value={userData.email}
               onChange={(e) => setUserData({ ...userData, email: e.target.value })}
-              className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary text-gray-900"
             />
           </div>
           <button
@@ -144,7 +144,7 @@ const Settings: React.FC = () => {
             <label className="block mb-1 font-medium">Current Password</label>
             <input
               type="password"
-              className="w-full px-4 py-2 border rounded-lg"
+              className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900"
               value={currentPassword}
               onChange={e => setCurrentPassword(e.target.value)}
               autoComplete="current-password"
@@ -154,7 +154,7 @@ const Settings: React.FC = () => {
             <label className="block mb-1 font-medium">New Password</label>
             <input
               type="password"
-              className="w-full px-4 py-2 border rounded-lg"
+              className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900"
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
               autoComplete="new-password"
@@ -164,7 +164,7 @@ const Settings: React.FC = () => {
             <label className="block mb-1 font-medium">Confirm New Password</label>
             <input
               type="password"
-              className="w-full px-4 py-2 border rounded-lg"
+              className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900"
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
               autoComplete="new-password"

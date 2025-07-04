@@ -507,21 +507,21 @@ const AdminDashboard: React.FC = () => {
               <form className="space-y-4 text-left" onSubmit={e => { e.preventDefault(); handleSaveEdit(); }}>
                 <div>
                   <label className="font-semibold block mb-1">Subject:</label>
-                  <input type="text" className="w-full border rounded px-2 py-1" value={editData.subject} onChange={e => setEditData({ ...editData, subject: e.target.value })} required />
+                  <input type="text" className="w-full border rounded px-2 py-1 bg-white text-gray-900" value={editData.subject} onChange={e => setEditData({ ...editData, subject: e.target.value })} required />
                 </div>
                 <div>
                   <label className="font-semibold block mb-1">Topic:</label>
-                  <input type="text" className="w-full border rounded px-2 py-1" value={editData.topic} onChange={e => setEditData({ ...editData, topic: e.target.value })} required />
+                  <input type="text" className="w-full border rounded px-2 py-1 bg-white text-gray-900" value={editData.topic} onChange={e => setEditData({ ...editData, topic: e.target.value })} required />
                 </div>
                 <div>
                   <label className="font-semibold block mb-1">Question:</label>
-                  <textarea className="w-full border rounded px-2 py-1" value={editData.question} onChange={e => setEditData({ ...editData, question: e.target.value })} required rows={3} />
+                  <textarea className="w-full border rounded px-2 py-1 bg-white text-gray-900" value={editData.question} onChange={e => setEditData({ ...editData, question: e.target.value })} required rows={3} />
                 </div>
                 <div>
                   <label className="font-semibold block mb-1">Choices:</label>
                   {editData.choices?.map((c: string, i: number) => (
                     <div key={i} className="flex gap-2 mb-1">
-                      <input type="text" className="flex-1 border rounded px-2 py-1" value={c} onChange={e => {
+                      <input type="text" className="flex-1 border rounded px-2 py-1 bg-white text-gray-900" value={c} onChange={e => {
                         const newChoices = [...editData.choices];
                         newChoices[i] = e.target.value;
                         setEditData({ ...editData, choices: newChoices });
@@ -538,7 +538,7 @@ const AdminDashboard: React.FC = () => {
                   <label className="font-semibold block mb-1">Explanations:</label>
                   {editData.explanations?.map((e: string, i: number) => (
                     <div key={i} className="flex gap-2 mb-1">
-                      <input type="text" className="flex-1 border rounded px-2 py-1" value={e} onChange={ev => {
+                      <input type="text" className="flex-1 border rounded px-2 py-1 bg-white text-gray-900" value={e} onChange={ev => {
                         const newExps = [...editData.explanations];
                         newExps[i] = ev.target.value;
                         setEditData({ ...editData, explanations: newExps });
@@ -553,11 +553,11 @@ const AdminDashboard: React.FC = () => {
                 </div>
                 <div>
                   <label className="font-semibold block mb-1">Reference:</label>
-                  <input type="text" className="w-full border rounded px-2 py-1" value={editData.reference} onChange={e => setEditData({ ...editData, reference: e.target.value })} />
+                  <input type="text" className="w-full border rounded px-2 py-1 bg-white text-gray-900" value={editData.reference} onChange={e => setEditData({ ...editData, reference: e.target.value })} />
                 </div>
                 <div>
                   <label className="font-semibold block mb-1">Rejection Reason:</label>
-                  <input type="text" className="w-full border rounded px-2 py-1" value={editData.rejectionReason || ''} onChange={e => setEditData({ ...editData, rejectionReason: e.target.value })} />
+                  <input type="text" className="w-full border rounded px-2 py-1 bg-white text-gray-900" value={editData.rejectionReason || ''} onChange={e => setEditData({ ...editData, rejectionReason: e.target.value })} />
                 </div>
                 {editError && <div className="text-red-500 text-sm">{editError}</div>}
                 <div className="flex justify-end gap-2 mt-4">

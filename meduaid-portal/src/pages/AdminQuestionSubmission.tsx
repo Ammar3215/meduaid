@@ -200,7 +200,7 @@ const AdminQuestionSubmission: React.FC = () => {
           {/* Writer Dropdown */}
           <div>
             <label className="block mb-1 font-medium">Assign Writer</label>
-            <select {...register('writer')} className="w-full px-4 py-2 border rounded-lg">
+            <select {...register('writer')} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900">
               <option value="">Select Writer</option>
               {writers.map((w) => (
                 <option key={w._id} value={w._id}>{w.name} ({w.email})</option>
@@ -211,7 +211,7 @@ const AdminQuestionSubmission: React.FC = () => {
           {/* Category Dropdown */}
           <div>
             <label className="block mb-1 font-medium">Category</label>
-            <select {...register('category')} className="w-full px-4 py-2 border rounded-lg">
+            <select {...register('category')} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900">
               {categories.map((cat) => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
@@ -221,7 +221,7 @@ const AdminQuestionSubmission: React.FC = () => {
           {/* Subject Dropdown */}
           <div>
             <label className="block mb-1 font-medium">Subject</label>
-            <select {...register('subject')} className="w-full px-4 py-2 border rounded-lg" disabled={!category}>
+            <select {...register('subject')} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900" disabled={!category}>
               <option value="">Select Subject</option>
               {subjects.map((subj) => (
                 <option key={subj} value={subj}>{subj}</option>
@@ -232,7 +232,7 @@ const AdminQuestionSubmission: React.FC = () => {
           {/* Topic Dropdown */}
           <div>
             <label className="block mb-1 font-medium">Topic</label>
-            <select {...register('topic')} className="w-full px-4 py-2 border rounded-lg" disabled={!subject}>
+            <select {...register('topic')} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900" disabled={!subject}>
               <option value="">Select Topic</option>
               {(topics as string[]).map((topic: string) => (
                 <option key={topic} value={topic}>{topic}</option>
@@ -244,7 +244,7 @@ const AdminQuestionSubmission: React.FC = () => {
           {subtopics && subtopics.length > 0 && (
             <div>
               <label className="block mb-1 font-medium">Subtopic</label>
-              <select {...register('subtopic' as const)} className="w-full px-4 py-2 border rounded-lg">
+              <select {...register('subtopic' as const)} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900">
                 <option value="">Select Subtopic</option>
                 {subtopics.map((sub: string) => (
                   <option key={sub} value={sub}>{sub}</option>
@@ -255,7 +255,7 @@ const AdminQuestionSubmission: React.FC = () => {
           {/* Question Textarea */}
           <div>
             <label className="block mb-1 font-medium">Question</label>
-            <textarea {...register('question')} className="w-full px-4 py-2 border rounded-lg min-h-[80px]" />
+            <textarea {...register('question')} className="w-full px-4 py-2 border rounded-lg min-h-[80px] bg-white text-gray-900" />
             {errors.question && <p className="text-red-500 text-sm mt-1">Required field</p>}
           </div>
           {/* Choices & Explanations (A–E) */}
@@ -265,7 +265,7 @@ const AdminQuestionSubmission: React.FC = () => {
               <div key={i} className="mb-4">
                 <input
                   {...register(`choices.${i}` as const)}
-                  className="w-full px-4 py-2 border rounded-lg mb-1"
+                  className="w-full px-4 py-2 border rounded-lg mb-1 bg-white text-gray-900"
                   placeholder={`Choice ${String.fromCharCode(65 + i)}`}
                 />
                 {errors.choices && Array.isArray(errors.choices) && errors.choices[i] && (
@@ -273,7 +273,7 @@ const AdminQuestionSubmission: React.FC = () => {
                 )}
                 <input
                   {...register(`explanations.${i}` as const)}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900"
                   placeholder={`Explanation for Choice ${String.fromCharCode(65 + i)}`}
                 />
                 {errors.explanations && Array.isArray(errors.explanations) && errors.explanations[i] && (
@@ -287,7 +287,7 @@ const AdminQuestionSubmission: React.FC = () => {
             <label className="block mb-1 font-medium">Select Correct Answer</label>
             <select
               {...register('correctChoice', { valueAsNumber: true })}
-              className="w-full px-4 py-2 border rounded-lg"
+              className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900"
               value={watch('correctChoice')}
               onChange={e => setValue('correctChoice', Number(e.target.value))}
             >
@@ -300,18 +300,18 @@ const AdminQuestionSubmission: React.FC = () => {
           {/* Image Uploader */}
           <div>
             <label className="block mb-1 font-medium">Upload Images</label>
-            <input type="file" multiple accept="image/*" onChange={handleImageChange} className="mb-2" />
+            <input type="file" multiple accept="image/*" onChange={handleImageChange} className="mb-2 bg-white text-gray-900" />
           </div>
           {/* Reference */}
           <div>
             <label className="block mb-1 font-medium">Reference</label>
-            <input {...register('reference')} className="w-full px-4 py-2 border rounded-lg" />
+            <input {...register('reference')} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900" />
             {errors.reference && <p className="text-red-500 text-sm mt-1">Required field</p>}
           </div>
           {/* Difficulty Dropdown */}
           <div>
             <label className="block mb-1 font-medium">Difficulty</label>
-            <select {...register('difficulty')} className="w-full px-4 py-2 border rounded-lg">
+            <select {...register('difficulty')} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900">
               <option value="easy">Easy</option>
               <option value="normal">Normal</option>
               <option value="hard">Hard</option>
@@ -322,7 +322,7 @@ const AdminQuestionSubmission: React.FC = () => {
         <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 mt-8 w-full">
           <button
             type="button"
-            className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-400 transition"
+            className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-400 transition bg-white text-gray-900"
             disabled={isSubmitting || loading}
             onClick={handleSubmit(onSaveDraft)}
           >
@@ -330,7 +330,7 @@ const AdminQuestionSubmission: React.FC = () => {
           </button>
           <button
             type="submit"
-            className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-dark transition"
+            className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-dark transition bg-white text-gray-900"
             disabled={isSubmitting || loading}
           >
             {loading ? 'Submitting...' : 'Submit'}
@@ -338,7 +338,7 @@ const AdminQuestionSubmission: React.FC = () => {
         </div>
         <div className="flex gap-2 flex-wrap mt-2">
           {imagePreviews.map((src, i) => (
-            <img key={i} src={src} alt="preview" className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded border" />
+            <img key={i} src={src} alt="preview" className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded border bg-white text-gray-900" />
           ))}
         </div>
         {success && <div className="text-green-600 text-center mt-2">Question submitted successfully!</div>}

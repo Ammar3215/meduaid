@@ -178,7 +178,7 @@ const QuestionSubmission: React.FC = () => {
         {/* Category Dropdown */}
         <div>
           <label className="block mb-1 font-medium">Category</label>
-          <select {...register('category')} className="w-full px-4 py-2 border rounded-lg">
+          <select {...register('category')} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900">
             {categories.map((cat) => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
@@ -188,7 +188,7 @@ const QuestionSubmission: React.FC = () => {
         {/* Subject Dropdown */}
         <div>
           <label className="block mb-1 font-medium">Subject</label>
-          <select {...register('subject')} className="w-full px-4 py-2 border rounded-lg" disabled={!category}>
+          <select {...register('subject')} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900" disabled={!category}>
             <option value="">Select Subject</option>
             {subjects.map((subj) => (
               <option key={subj} value={subj}>{subj}</option>
@@ -199,7 +199,7 @@ const QuestionSubmission: React.FC = () => {
         {/* Topic Dropdown */}
         <div>
           <label className="block mb-1 font-medium">Topic</label>
-          <select {...register('topic')} className="w-full px-4 py-2 border rounded-lg" disabled={!subject}>
+          <select {...register('topic')} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900" disabled={!subject}>
             <option value="">Select Topic</option>
             {(topics as string[]).map((topic: string) => (
               <option key={topic} value={topic}>{topic}</option>
@@ -211,7 +211,7 @@ const QuestionSubmission: React.FC = () => {
         {subtopics && subtopics.length > 0 && (
           <div>
             <label className="block mb-1 font-medium">Subtopic</label>
-            <select {...register('subtopic' as const)} className="w-full px-4 py-2 border rounded-lg">
+            <select {...register('subtopic' as const)} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900">
               <option value="">Select Subtopic</option>
               {subtopics.map((sub: string) => (
                 <option key={sub} value={sub}>{sub}</option>
@@ -222,7 +222,7 @@ const QuestionSubmission: React.FC = () => {
         {/* Question Textarea */}
         <div>
           <label className="block mb-1 font-medium">Question</label>
-          <textarea {...register('question')} className="w-full px-4 py-2 border rounded-lg min-h-[80px]" />
+          <textarea {...register('question')} className="w-full px-4 py-2 border rounded-lg min-h-[80px] bg-white text-gray-900" />
           {errors.question && <p className="text-red-500 text-sm mt-1">{errors.question.message}</p>}
         </div>
         {/* Choices & Explanations (A–E) */}
@@ -232,13 +232,13 @@ const QuestionSubmission: React.FC = () => {
             <div key={i} className="mb-4">
               <input
                 {...register(`choices.${i}` as const)}
-                className="w-full px-4 py-2 border rounded-lg mb-1"
+                className="w-full px-4 py-2 border rounded-lg mb-1 bg-white text-gray-900"
                 placeholder={`Choice ${String.fromCharCode(65 + i)}`}
               />
               {errors.choices?.[i] && <p className="text-red-500 text-sm mt-1">Choice {String.fromCharCode(65 + i)} is required.</p>}
               <input
                 {...register(`explanations.${i}` as const)}
-                className="w-full px-4 py-2 border rounded-lg"
+                className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900"
                 placeholder={`Explanation for Choice ${String.fromCharCode(65 + i)}`}
               />
               {errors.explanations?.[i] && <p className="text-red-500 text-sm mt-1">Explanation for Choice {String.fromCharCode(65 + i)} is required.</p>}
@@ -248,7 +248,7 @@ const QuestionSubmission: React.FC = () => {
         {/* Correct Choice Dropdown */}
         <div>
           <label className="block mb-1 font-medium">Correct Choice</label>
-          <select {...register('correctChoice', { valueAsNumber: true })} className="w-full px-4 py-2 border rounded-lg">
+          <select {...register('correctChoice', { valueAsNumber: true })} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900">
             {['A', 'B', 'C', 'D', 'E'].map((label, idx) => (
               <option key={idx} value={idx}>{label}</option>
             ))}
@@ -258,23 +258,23 @@ const QuestionSubmission: React.FC = () => {
         {/* Image Uploader */}
         <div>
           <label className="block mb-1 font-medium">Upload Images</label>
-          <input type="file" multiple accept="image/*" onChange={handleImageChange} className="mb-2" />
+          <input type="file" multiple accept="image/*" onChange={handleImageChange} className="mb-2 bg-white text-gray-900" />
           <div className="flex gap-2 flex-wrap">
             {imagePreviews.map((src, i) => (
-              <img key={i} src={src} alt="preview" className="w-16 h-16 object-cover rounded border" />
+              <img key={i} src={src} alt="preview" className="w-16 h-16 object-cover rounded border bg-white text-gray-900" />
             ))}
           </div>
         </div>
         {/* Reference */}
         <div>
           <label className="block mb-1 font-medium">Reference</label>
-          <input {...register('reference')} className="w-full px-4 py-2 border rounded-lg" />
+          <input {...register('reference')} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900" />
           {errors.reference && <p className="text-red-500 text-sm mt-1">{errors.reference.message}</p>}
         </div>
         {/* Difficulty Dropdown */}
         <div>
           <label className="block mb-1 font-medium">Difficulty</label>
-          <select {...register('difficulty')} className="w-full px-4 py-2 border rounded-lg">
+          <select {...register('difficulty')} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900">
             <option value="easy">Easy</option>
             <option value="normal">Normal</option>
             <option value="hard">Hard</option>

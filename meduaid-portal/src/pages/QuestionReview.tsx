@@ -143,7 +143,7 @@ const QuestionReview: React.FC = () => {
                 <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700">
                   <TagIcon className="w-4 h-4 text-primary" /> Category
                 </label>
-                <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary" value={selectedCategory} onChange={e => { setSelectedCategory(e.target.value); setSelectedSubject('All'); setSelectedTopic('All'); }}>
+                <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900" value={selectedCategory} onChange={e => { setSelectedCategory(e.target.value); setSelectedSubject('All'); setSelectedTopic('All'); }}>
                   {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
               </div>
@@ -151,7 +151,7 @@ const QuestionReview: React.FC = () => {
                 <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700">
                   <BookOpenIcon className="w-4 h-4 text-primary" /> Subject
                 </label>
-                <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary" value={selectedSubject} onChange={e => { setSelectedSubject(e.target.value); setSelectedTopic('All'); }}>
+                <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900" value={selectedSubject} onChange={e => { setSelectedSubject(e.target.value); setSelectedTopic('All'); }}>
                   <option value="All">All</option>
                   {subjects.map(subj => <option key={subj} value={subj}>{subj}</option>)}
                 </select>
@@ -160,7 +160,7 @@ const QuestionReview: React.FC = () => {
                 <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700">
                   <FunnelIcon className="w-4 h-4 text-primary" /> Topic
                 </label>
-                <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary" value={selectedTopic} onChange={e => setSelectedTopic(e.target.value)}>
+                <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900" value={selectedTopic} onChange={e => setSelectedTopic(e.target.value)}>
                   <option value="All">All</option>
                   {(topics as string[]).map((t: string) => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -307,7 +307,7 @@ const QuestionReview: React.FC = () => {
                           type="text"
                           value={rejectionReason}
                           onChange={e => setRejectionReason(e.target.value)}
-                          className="px-2 py-1 border rounded"
+                          className="px-2 py-1 border rounded bg-white text-gray-900"
                           placeholder="Enter rejection reason"
                         />
                         <button onClick={() => { saveRejectionReason(detailsModal.question._id); setEditReasonId(null); setDetailsModal({ ...detailsModal, open: false }); }} className="bg-primary text-white px-2 py-1 rounded text-xs self-start">Save</button>
@@ -346,7 +346,7 @@ const QuestionReview: React.FC = () => {
                       <div className="mb-2"><span className="font-semibold">Subject:</span> {detailsModal.question.subject}</div>
                       <div className="mb-2"><span className="font-semibold">Topic:</span> {detailsModal.question.topic}</div>
                       <div className="mb-2"><span className="font-semibold">Reference:</span>
-                        <input className="w-full px-2 py-1 border rounded" value={editData.reference} onChange={e => setEditData((d: any) => ({ ...d, reference: e.target.value }))} />
+                        <input className="w-full px-2 py-1 border rounded bg-white text-gray-900" value={editData.reference} onChange={e => setEditData((d: any) => ({ ...d, reference: e.target.value }))} />
                       </div>
                     </div>
                   </div>
@@ -367,10 +367,10 @@ const QuestionReview: React.FC = () => {
                         {editData.choices?.map((_: string, i: number) => (
                           <tr key={i} className="border-t">
                             <td className="px-2 py-1 align-top">
-                              <input className="w-full px-2 py-1 border rounded" value={editData.choices[i]} onChange={e => setEditData((d: any) => { const arr = [...d.choices]; arr[i] = e.target.value; return { ...d, choices: arr }; })} />
+                              <input className="w-full px-2 py-1 border rounded bg-white text-gray-900" value={editData.choices[i]} onChange={e => setEditData((d: any) => { const arr = [...d.choices]; arr[i] = e.target.value; return { ...d, choices: arr }; })} />
                             </td>
                             <td className="px-2 py-1 align-top">
-                              <input className="w-full px-2 py-1 border rounded" value={editData.explanations[i]} onChange={e => setEditData((d: any) => { const arr = [...d.explanations]; arr[i] = e.target.value; return { ...d, explanations: arr }; })} />
+                              <input className="w-full px-2 py-1 border rounded bg-white text-gray-900" value={editData.explanations[i]} onChange={e => setEditData((d: any) => { const arr = [...d.explanations]; arr[i] = e.target.value; return { ...d, explanations: arr }; })} />
                             </td>
                           </tr>
                         ))}
