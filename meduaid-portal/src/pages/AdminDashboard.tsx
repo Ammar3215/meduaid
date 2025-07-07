@@ -496,12 +496,51 @@ const AdminDashboard: React.FC = () => {
             error={modalError}
           >
             {!isEditing && selectedSubmission && (
-              <button
-                className="px-4 py-2 rounded bg-primary text-white font-semibold hover:bg-primary-dark transition"
-                onClick={handleEditClick}
-              >
-                Edit
-              </button>
+              <div className="flex flex-col gap-2">
+                <label className="font-semibold">Update Status:</label>
+                <select
+                  className="border rounded px-2 py-1 text-gray-900"
+                  value={selectedSubmission.status}
+                  disabled={editLoading}
+                  onChange={async e => {
+                    const newStatus = e.target.value;
+                    setEditLoading(true);
+                    try {
+                      const res = await fetch(`${API_BASE_URL}/api/submissions/${selectedSubmission._id}`, {
+                        method: 'PATCH',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          Authorization: `Bearer ${jwt}`,
+                        },
+                        body: JSON.stringify({ status: newStatus }),
+                      });
+                      if (res.ok) {
+                        const updated = await res.json();
+                        setSelectedSubmission(updated);
+                        setStats((prev: any) => {
+                          if (!prev) return prev;
+                          const updatedSubmissions = prev.allSubmissions.map((q: any) =>
+                            q._id === updated._id ? { ...q, ...updated } : q
+                          );
+                          return { ...prev, allSubmissions: updatedSubmissions };
+                        });
+                      }
+                    } finally {
+                      setEditLoading(false);
+                    }
+                  }}
+                >
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+                <button
+                  className="px-4 py-2 rounded bg-primary text-white font-semibold hover:bg-primary-dark transition mt-2"
+                  onClick={handleEditClick}
+                >
+                  Edit
+                </button>
+              </div>
             )}
             {isEditing && (
               <form className="space-y-4 text-left" onSubmit={e => { e.preventDefault(); handleSaveEdit(); }}>

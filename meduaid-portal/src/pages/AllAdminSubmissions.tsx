@@ -6,6 +6,8 @@ import QuestionViewModal from '../components/QuestionViewModal';
 
 const categories = Object.keys(subjectsStructure);
 
+const allCategories = ['All', ...categories];
+
 // Utility to convert array of objects to CSV
 function toCSV(rows: any[], columns: { label: string, key: string }[]) {
   const header = columns.map(col => `"${col.label}"`).join(',');
@@ -34,7 +36,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
 const AllAdminSubmissions: React.FC = () => {
   const { jwt } = useAuth();
-  const [category, setCategory] = useState(categories[0]);
+  const [category, setCategory] = useState('All');
   const subjects = Object.keys((subjectsStructure as Record<string, any>)[category] || {});
   const [subject, setSubject] = useState('All');
   const topics = subject !== 'All'
@@ -176,7 +178,7 @@ const AllAdminSubmissions: React.FC = () => {
                 <TagIcon className="w-4 h-4 text-primary" /> Category
               </label>
               <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900" value={category} onChange={e => { setCategory(e.target.value); setSubject('All'); setTopic('All'); }}>
-                {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                {allCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
               </select>
             </div>
             <div className="flex flex-col min-w-[160px]">
@@ -320,12 +322,45 @@ const AllAdminSubmissions: React.FC = () => {
             error={modalError}
           >
             {modalMode === 'view' && selectedSubmission && (
-              <button
-                className="px-4 py-2 rounded bg-primary text-white font-semibold hover:bg-primary-dark transition"
-                onClick={() => setModalMode('edit')}
-              >
-                Edit
-              </button>
+              <div className="flex flex-col gap-2">
+                <label className="font-semibold">Update Status:</label>
+                <select
+                  className="border rounded px-2 py-1 text-gray-900"
+                  value={selectedSubmission.status}
+                  disabled={modalLoading}
+                  onChange={async e => {
+                    const newStatus = e.target.value;
+                    setModalLoading(true);
+                    try {
+                      const res = await fetch(`${API_BASE_URL}/api/submissions/${selectedSubmission._id}`, {
+                        method: 'PATCH',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          Authorization: `Bearer ${jwt}`,
+                        },
+                        body: JSON.stringify({ status: newStatus }),
+                      });
+                      if (res.ok) {
+                        const updated = await res.json();
+                        setSelectedSubmission(updated);
+                        setQuestions(prev => prev.map(q => q._id === updated._id ? updated : q));
+                      }
+                    } finally {
+                      setModalLoading(false);
+                    }
+                  }}
+                >
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+                <button
+                  className="px-4 py-2 rounded bg-primary text-white font-semibold hover:bg-primary-dark transition mt-2"
+                  onClick={() => setModalMode('edit')}
+                >
+                  Edit
+                </button>
+              </div>
             )}
             {modalMode === 'edit' && selectedSubmission && (
               <AdminEditQuestionForm

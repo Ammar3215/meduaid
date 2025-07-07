@@ -80,7 +80,19 @@ const QuestionSubmission: React.FC = () => {
     return data.urls;
   };
 
-  const onSubmit = async (data: QuestionFormInputs) => {
+  // Add this helper to reset only question-specific fields
+  const resetQuestionFields = () => {
+    setValue('question', '');
+    setValue('choices', ['', '', '', '', '']);
+    setValue('explanations', ['', '', '', '', '']);
+    setValue('reference', '');
+    setValue('images', undefined);
+    setValue('correctChoice', 0);
+    setImagePreviews([]);
+  };
+
+  // Handler for Submit & Add Another
+  const onSubmitAndAddAnother = async (data: QuestionFormInputs) => {
     setLoading(true);
     setError('');
     setSuccess(false);
@@ -89,11 +101,11 @@ const QuestionSubmission: React.FC = () => {
       if (data.images && data.images.length > 0) {
         imageUrls = await uploadImages(data.images);
       }
-      // Prepare form data for backend
       const payload = {
         category: data.category,
         subject: data.subject,
         topic: data.topic,
+        subtopic: data.subtopic,
         question: data.question,
         choices: data.choices,
         explanations: data.explanations,
@@ -116,11 +128,8 @@ const QuestionSubmission: React.FC = () => {
         return;
       }
       setSuccess(true);
-      // Reset the form for a new question
-      setTimeout(() => {
-        setSuccess(false);
-        window.location.reload(); // quick reset for now; can be improved to use form reset
-      }, 1500);
+      resetQuestionFields();
+      setTimeout(() => setSuccess(false), 1500);
     } catch {
       setError('Network error');
     }
@@ -141,6 +150,7 @@ const QuestionSubmission: React.FC = () => {
         category: data.category,
         subject: data.subject,
         topic: data.topic,
+        subtopic: data.subtopic,
         question: data.question,
         choices: data.choices,
         explanations: data.explanations,
@@ -174,7 +184,7 @@ const QuestionSubmission: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-8 mt-8">
       <h2 className="text-2xl font-bold mb-6 text-primary text-center">Submit a Question</h2>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmitAndAddAnother)} className="space-y-4">
         {/* Category Dropdown */}
         <div>
           <label className="block mb-1 font-medium">Category</label>
@@ -289,6 +299,14 @@ const QuestionSubmission: React.FC = () => {
             onClick={handleSubmit(onSaveDraft)}
           >
             {loading ? 'Saving...' : 'Save as Draft'}
+          </button>
+          <button
+            type="button"
+            className="bg-blue-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-600 transition"
+            disabled={isSubmitting || loading}
+            onClick={handleSubmit(onSubmitAndAddAnother)}
+          >
+            {loading ? 'Submitting...' : 'Submit & Add Another'}
           </button>
           <button
             type="submit"

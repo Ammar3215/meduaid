@@ -16,6 +16,7 @@ export interface ISubmission extends Document {
   correctChoice: number;
   createdAt: Date;
   updatedAt: Date;
+  subtopic?: string;
 }
 
 const SubmissionSchema = new Schema<ISubmission>({
@@ -32,6 +33,7 @@ const SubmissionSchema = new Schema<ISubmission>({
   status: { type: String, enum: ['pending', 'approved', 'rejected', 'draft'], default: 'pending' },
   rejectionReason: { type: String },
   correctChoice: { type: Number, required: true },
+  subtopic: { type: String },
 }, { timestamps: true });
 
 export default mongoose.model<ISubmission>('Submission', SubmissionSchema); 

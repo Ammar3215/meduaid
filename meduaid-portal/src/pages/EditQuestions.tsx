@@ -11,6 +11,27 @@ type EditFormInputs = {
   images: FileList | null;
 };
 
+function RejectionReasonCell({ reason = '-' }) {
+  const [expanded, setExpanded] = useState(false);
+  const limit = 60;
+  if (!reason) return '-';
+  const isLong = reason.length > limit;
+  return (
+    <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxWidth: 220, display: 'inline-block' }}>
+      {expanded || !isLong ? reason : reason.slice(0, limit) + '...'}
+      {isLong && (
+        <button
+          className="text-primary ml-2 text-xs underline"
+          onClick={() => setExpanded(e => !e)}
+          type="button"
+        >
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+      )}
+    </span>
+  );
+}
+
 const EditQuestions: React.FC = () => {
   const { jwt } = useAuth();
   const [questions, setQuestions] = useState<any[]>([]);
@@ -141,9 +162,17 @@ const EditQuestions: React.FC = () => {
         <div className="flex flex-col gap-6">
           {questions.map((q) => (
             <div key={q._id} className={`rounded-xl border shadow p-4 md:p-6 flex flex-col gap-2 ${q.status === 'rejected' ? 'border-red-200 bg-red-50' : 'border-yellow-200 bg-yellow-50'}`}>
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+              <div className="flex flex-col gap-2">
                 <div className="font-semibold text-base md:text-lg text-gray-900">{q.question}</div>
-                <div className={`text-xs md:text-sm px-3 py-1 rounded-full font-semibold w-fit ${q.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{q.status === 'rejected' ? `Reason: ${q.rejectionReason || '-'}` : 'Draft'}</div>
+                <div className="flex flex-row gap-3 items-center">
+                  <div className={`text-xs md:text-sm px-3 py-1 rounded-full font-semibold w-fit ${q.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{q.status === 'rejected' ? 'Rejected' : 'Draft'}</div>
+                </div>
+                {q.status === 'rejected' && (
+                  <div className="mt-1 text-xs md:text-sm bg-red-50 text-red-800 rounded p-2 max-w-md">
+                    <span className="font-semibold">Reason: </span>
+                    <RejectionReasonCell reason={q.rejectionReason} />
+                  </div>
+                )}
               </div>
               {q.images && q.images.length > 0 && (
                 <div className="flex gap-2 flex-wrap mt-2">
