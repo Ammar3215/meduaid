@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Skeleton from '../components/Skeleton';
+import { subjectsStructure } from '../utils/subjectsStructure';
 
 interface Submission {
   _id: string;
@@ -10,9 +11,62 @@ interface Submission {
   createdAt: string;
   updatedAt: string;
   images?: string[];
+  subject: string;
+  topic: string;
+  subtopic?: string;
+  reference: string;
+  category: string;
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+
+const statusOptions = ['All', 'approved', 'pending', 'rejected', 'draft'];
+
+function getAllSubjects() {
+  const basic = Object.keys(subjectsStructure['Basic Sciences']);
+  const clinical = Object.keys(subjectsStructure['Clinical Sciences']);
+  return [...basic, ...clinical];
+}
+
+function getTopicsForSubject(subject: string) {
+  if ((subjectsStructure['Basic Sciences'] as Record<string, string[]>)[subject]) {
+    return (subjectsStructure['Basic Sciences'] as Record<string, string[]>)[subject];
+  }
+  if ((subjectsStructure['Clinical Sciences'] as Record<string, any>)[subject]) {
+    return Object.keys((subjectsStructure['Clinical Sciences'] as Record<string, any>)[subject]);
+  }
+  return [];
+}
+
+function RejectionReasonCell({ reason = '-' }) {
+  const [expanded, setExpanded] = useState(false);
+  const limit = 60;
+  if (!reason) return '-';
+  const isLong = reason.length > limit;
+  return (
+    <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxWidth: 220 }}>
+      {expanded || !isLong ? reason : reason.slice(0, limit) + '...'}
+      {isLong && (
+        <button
+          className="text-primary ml-2 text-xs underline"
+          onClick={() => setExpanded(e => !e)}
+          type="button"
+        >
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+      )}
+    </div>
+  );
+}
+
+const categoryOptions = ['All', ...Object.keys(subjectsStructure)];
+
+function getSubjectsForCategory(category: string) {
+  if (category === 'All') {
+    return getAllSubjects();
+  }
+  return Object.keys((subjectsStructure as Record<string, any>)[category] || {});
+}
 
 const AllSubmissions: React.FC = () => {
   const { jwt } = useAuth();
@@ -23,7 +77,34 @@ const AllSubmissions: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState('');
-  const [fullImage, setFullImage] = useState<string | null>(null);
+  const [fullImage, setFullImage] = useState<string | undefined>(undefined);
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [subjectFilter, setSubjectFilter] = useState('All');
+  const [topicFilter, setTopicFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  const subjects = getSubjectsForCategory(categoryFilter);
+  const topics = subjectFilter !== 'All' ? getTopicsForSubject(subjectFilter) : [];
+
+  // Filtered submissions
+  const filteredSubmissions = submissions.filter(sub => {
+    const statusMatch = statusFilter === 'All' || sub.status === statusFilter;
+    const categoryMatch = categoryFilter === 'All' || sub.category === categoryFilter;
+    const subjectMatch = subjectFilter === 'All' || sub.subject === subjectFilter;
+    const topicMatch = topicFilter === 'All' || sub.topic === topicFilter;
+    const dateFromMatch = !dateFrom || new Date(sub.createdAt) >= new Date(dateFrom);
+    const dateToMatch = !dateTo || new Date(sub.createdAt) <= new Date(dateTo + 'T23:59:59');
+    return statusMatch && categoryMatch && subjectMatch && topicMatch && dateFromMatch && dateToMatch;
+  });
+
+  // Calculate summary counts
+  const summary = {
+    pending: submissions.filter(s => s.status === 'pending').length,
+    approved: submissions.filter(s => s.status === 'approved').length,
+    rejected: submissions.filter(s => s.status === 'rejected').length,
+  };
 
   useEffect(() => {
     const fetchSubmissions = async () => {
@@ -73,7 +154,111 @@ const AllSubmissions: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-lg p-8 mt-8">
-      {/* Removed All My Submissions header as requested */}
+      {/* Summary Counter Card */}
+      <div className="flex flex-wrap gap-6 mb-8 justify-center">
+        <div className="flex-1 min-w-[160px] bg-yellow-50 border border-yellow-200 rounded-xl shadow p-4 flex flex-col items-center">
+          <span className="text-yellow-500 text-3xl font-bold mb-1">{summary.pending}</span>
+          <span className="text-yellow-700 font-semibold">Pending</span>
+        </div>
+        <div className="flex-1 min-w-[160px] bg-green-50 border border-green-200 rounded-xl shadow p-4 flex flex-col items-center">
+          <span className="text-green-500 text-3xl font-bold mb-1">{summary.approved}</span>
+          <span className="text-green-700 font-semibold">Approved</span>
+        </div>
+        <div className="flex-1 min-w-[160px] bg-red-50 border border-red-200 rounded-xl shadow p-4 flex flex-col items-center">
+          <span className="text-red-500 text-3xl font-bold mb-1">{summary.rejected}</span>
+          <span className="text-red-700 font-semibold">Rejected</span>
+        </div>
+      </div>
+      {/* Filter Bar */}
+      <div className="mb-8 p-4 bg-gray-50 rounded-xl shadow flex flex-wrap gap-4 items-end">
+        <div>
+          <label className="block text-xs font-semibold mb-1">Status</label>
+          <select
+            className="px-3 py-2 border rounded-lg bg-white text-gray-900"
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+          >
+            {statusOptions.map(opt => (
+              <option key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold mb-1">Category</label>
+          <select
+            className="px-3 py-2 border rounded-lg bg-white text-gray-900"
+            value={categoryFilter}
+            onChange={e => {
+              setCategoryFilter(e.target.value);
+              setSubjectFilter('All');
+              setTopicFilter('All');
+            }}
+          >
+            {categoryOptions.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold mb-1">Subject</label>
+          <select
+            className="px-3 py-2 border rounded-lg bg-white text-gray-900"
+            value={subjectFilter}
+            onChange={e => {
+              setSubjectFilter(e.target.value);
+              setTopicFilter('All');
+            }}
+            disabled={categoryFilter === 'All'}
+          >
+            <option value="All">All</option>
+            {subjects.map(subj => (
+              <option key={subj} value={subj}>{subj}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold mb-1">Topic</label>
+          <select
+            className="px-3 py-2 border rounded-lg bg-white text-gray-900"
+            value={topicFilter}
+            onChange={e => setTopicFilter(e.target.value)}
+            disabled={subjectFilter === 'All'}
+          >
+            <option value="All">All</option>
+            {topics.map(topic => (
+              <option key={topic} value={topic}>{topic}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold mb-1">Date From</label>
+          <input
+            type="date"
+            className="px-3 py-2 border rounded-lg bg-white text-gray-900"
+            value={dateFrom}
+            onChange={e => setDateFrom(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold mb-1">Date To</label>
+          <input
+            type="date"
+            className="px-3 py-2 border rounded-lg bg-white text-gray-900"
+            value={dateTo}
+            onChange={e => setDateTo(e.target.value)}
+          />
+        </div>
+        <div className="flex items-end h-full">
+          <button
+            type="button"
+            className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold border hover:bg-gray-300 transition"
+            onClick={() => { setDateFrom(''); setDateTo(''); }}
+            disabled={!dateFrom && !dateTo}
+          >
+            Clear
+          </button>
+        </div>
+      </div>
       {loading ? (
         <div className="flex flex-col gap-4">
           <Skeleton height={40} />
@@ -83,7 +268,7 @@ const AllSubmissions: React.FC = () => {
         </div>
       ) : error ? (
         <div className="text-red-500 text-center">{error}</div>
-      ) : submissions.length === 0 ? (
+      ) : filteredSubmissions.length === 0 ? (
         <div className="text-center text-gray-500">No submissions found.</div>
       ) : (
         <div className="overflow-x-auto">
@@ -99,7 +284,7 @@ const AllSubmissions: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {submissions.map((sub) => (
+              {filteredSubmissions.map((sub) => (
                 <tr key={sub._id} className="border-b">
                   <td className="py-2 px-4 border max-w-xs truncate" title={sub.question}>{sub.question}</td>
                   <td className="py-2 px-4 border">
@@ -111,7 +296,9 @@ const AllSubmissions: React.FC = () => {
                       {sub.status}
                     </span>
                   </td>
-                  <td className="py-2 px-4 border text-red-600">{sub.status === 'rejected' ? sub.rejectionReason || '-' : '-'}</td>
+                  <td className="py-2 px-4 border text-red-600">
+                    {sub.status === 'rejected' ? <RejectionReasonCell reason={sub.rejectionReason} /> : '-'}
+                  </td>
                   <td className="py-2 px-4 border">{new Date(sub.createdAt).toLocaleString()}</td>
                   <td className="py-2 px-4 border">{new Date(sub.updatedAt).toLocaleString()}</td>
                   <td className="py-2 px-4 border">
@@ -149,6 +336,9 @@ const AllSubmissions: React.FC = () => {
                   <div>
                     <div className="mb-2"><span className="font-semibold">Subject:</span> {selectedSubmission.subject}</div>
                     <div className="mb-2"><span className="font-semibold">Topic:</span> {selectedSubmission.topic}</div>
+                    {selectedSubmission.subtopic && (
+                      <div className="mb-2"><span className="font-semibold">Subtopic:</span> {selectedSubmission.subtopic}</div>
+                    )}
                     <div className="mb-2"><span className="font-semibold">Reference:</span> {selectedSubmission.reference}</div>
                   </div>
                   <div>
@@ -156,7 +346,7 @@ const AllSubmissions: React.FC = () => {
                       ${selectedSubmission.status === 'approved' ? 'bg-green-100 text-green-700' :
                         selectedSubmission.status === 'rejected' ? 'bg-red-100 text-red-700' :
                         'bg-yellow-100 text-yellow-700'}`}>{selectedSubmission.status}</span></div>
-                    <div className="mb-2"><span className="font-semibold">Rejection Reason:</span> {selectedSubmission.rejectionReason || '-'}</div>
+                    <div className="mb-2"><span className="font-semibold">Rejection Reason:</span> <RejectionReasonCell reason={selectedSubmission.rejectionReason} /></div>
                     <div className="mb-2"><span className="font-semibold">Submitted At:</span> {new Date(selectedSubmission.createdAt).toLocaleString()}</div>
                     <div className="mb-2"><span className="font-semibold">Last Updated:</span> {new Date(selectedSubmission.updatedAt).toLocaleString()}</div>
                   </div>
@@ -213,9 +403,9 @@ const AllSubmissions: React.FC = () => {
           </div>
           {/* Fullscreen image overlay */}
           {fullImage && (
-            <div className="fixed inset-0 z-60 flex items-center justify-center bg-black bg-opacity-90" onClick={() => setFullImage(null)}>
+            <div className="fixed inset-0 z-60 flex items-center justify-center bg-black bg-opacity-90" onClick={() => setFullImage(undefined)}>
               <img src={fullImage} alt="full" className="max-h-[90vh] max-w-[90vw] rounded shadow-lg" />
-              <button className="absolute top-8 right-8 text-white text-4xl font-bold" onClick={() => setFullImage(null)}>&times;</button>
+              <button className="absolute top-8 right-8 text-white text-4xl font-bold" onClick={() => setFullImage(undefined)}>&times;</button>
             </div>
           )}
         </div>

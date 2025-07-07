@@ -8,6 +8,27 @@ import Skeleton from '../components/Skeleton';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
+function RejectionReasonCell({ reason = '-' }) {
+  const [expanded, setExpanded] = useState(false);
+  const limit = 60;
+  if (!reason) return '-';
+  const isLong = reason.length > limit;
+  return (
+    <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxWidth: 220 }}>
+      {expanded || !isLong ? reason : reason.slice(0, limit) + '...'}
+      {isLong && (
+        <button
+          className="text-primary ml-2 text-xs underline"
+          onClick={() => setExpanded(e => !e)}
+          type="button"
+        >
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 const Dashboard: React.FC = () => {
   const { jwt, user } = useAuth();
   const navigate = useNavigate();
@@ -355,7 +376,7 @@ const Dashboard: React.FC = () => {
                             <div className="font-semibold text-gray-900 truncate">{q.subject} - {q.topic}</div>
                             <div className="flex flex-wrap items-center gap-2 mt-1">
                               <span className="inline-block text-xs font-semibold rounded-full px-2 py-0.5 bg-red-100 text-red-700">Rejected</span>
-                              <span className="inline-block text-xs font-bold rounded-full px-2 py-0.5 bg-red-200 text-red-800">{q.rejectionReason || '-'}</span>
+                              <RejectionReasonCell reason={q.rejectionReason} />
                             </div>
                           </div>
                           <button
@@ -400,7 +421,7 @@ const Dashboard: React.FC = () => {
                                   <div className="font-semibold text-gray-900 truncate">{q.subject} - {q.topic}</div>
                                   <div className="flex flex-wrap items-center gap-2 mt-1">
                                     <span className="inline-block text-xs font-semibold rounded-full px-2 py-0.5 bg-red-100 text-red-700">Rejected</span>
-                                    <span className="inline-block text-xs font-bold rounded-full px-2 py-0.5 bg-red-200 text-red-800">{q.rejectionReason || '-'}</span>
+                                    <RejectionReasonCell reason={q.rejectionReason} />
                                   </div>
                                 </div>
                                 <button
@@ -468,7 +489,9 @@ const Dashboard: React.FC = () => {
                               {q.status}
                             </span>
                           </td>
-                          <td>{q.status === 'rejected' ? q.rejectionReason || '-' : '-'}</td>
+                          <td>
+                            {q.status === 'rejected' ? <RejectionReasonCell reason={q.rejectionReason} /> : '-'}
+                          </td>
                           <td>
                             <button
                               className="bg-primary text-white px-3 py-1 rounded font-semibold hover:bg-primary-dark"

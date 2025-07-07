@@ -102,6 +102,61 @@ const AdminQuestionSubmission: React.FC = () => {
     return data.urls;
   };
 
+  const resetQuestionFields = () => {
+    setValue('question', '');
+    setValue('choices', ['', '', '', '', '']);
+    setValue('explanations', ['', '', '', '', '']);
+    setValue('reference', '');
+    setValue('images', undefined);
+    setValue('correctChoice', 0);
+    setImagePreviews([]);
+  };
+
+  const onSubmitAndAddAnother = async (data: AdminQuestionFormInputs) => {
+    setLoading(true);
+    setError('');
+    setSuccess(false);
+    try {
+      let imageUrls: string[] = [];
+      if (data.images && data.images.length > 0) {
+        imageUrls = await uploadImages(data.images);
+      }
+      const payload = {
+        category: data.category,
+        subject: data.subject,
+        topic: data.topic,
+        subtopic: data.subtopic,
+        question: data.question,
+        choices: data.choices,
+        explanations: data.explanations,
+        reference: data.reference,
+        difficulty: data.difficulty,
+        images: imageUrls,
+        writer: data.writer,
+        correctChoice: data.correctChoice,
+      };
+      const response = await fetch(`${API_BASE_URL}/api/submissions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        setError('Failed to submit question');
+        setLoading(false);
+        return;
+      }
+      setSuccess(true);
+      resetQuestionFields();
+      setTimeout(() => setSuccess(false), 1500);
+    } catch {
+      setError('Network error');
+    }
+    setLoading(false);
+  };
+
   const onSubmit = async (data: AdminQuestionFormInputs) => {
     setLoading(true);
     setError('');
@@ -115,6 +170,7 @@ const AdminQuestionSubmission: React.FC = () => {
         category: data.category,
         subject: data.subject,
         topic: data.topic,
+        subtopic: data.subtopic,
         question: data.question,
         choices: data.choices,
         explanations: data.explanations,
@@ -161,6 +217,7 @@ const AdminQuestionSubmission: React.FC = () => {
         category: data.category,
         subject: data.subject,
         topic: data.topic,
+        subtopic: data.subtopic,
         question: data.question,
         choices: data.choices,
         explanations: data.explanations,
@@ -193,7 +250,7 @@ const AdminQuestionSubmission: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-full max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-2 sm:p-8 mt-4 sm:mt-8">
+    <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 sm:p-10 mt-8">
       <h2 className="text-2xl font-bold mb-6 text-primary text-center">Submit a Question (Admin)</h2>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 text-sm sm:text-base">
         <div className="flex flex-col gap-2 sm:gap-4">
@@ -319,18 +376,26 @@ const AdminQuestionSubmission: React.FC = () => {
             {errors.difficulty && <p className="text-red-500 text-sm mt-1">Required field</p>}
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 mt-8 w-full">
+        <div className="flex flex-row justify-end gap-4 mt-8">
           <button
             type="button"
-            className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-400 transition bg-white text-gray-900"
+            className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-400 transition"
             disabled={isSubmitting || loading}
             onClick={handleSubmit(onSaveDraft)}
           >
             {loading ? 'Saving...' : 'Save as Draft'}
           </button>
           <button
+            type="button"
+            className="bg-blue-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-600 transition"
+            disabled={isSubmitting || loading}
+            onClick={handleSubmit(onSubmitAndAddAnother)}
+          >
+            {loading ? 'Submitting...' : 'Submit & Add Another'}
+          </button>
+          <button
             type="submit"
-            className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-dark transition bg-white text-gray-900"
+            className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-dark transition"
             disabled={isSubmitting || loading}
           >
             {loading ? 'Submitting...' : 'Submit'}

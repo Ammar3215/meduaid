@@ -4,7 +4,7 @@ import Submission from '../models/Submission';
 // Writer submits a question
 export const createSubmission: RequestHandler = async (req, res) => {
   try {
-    const { category, subject, topic, question, choices, explanations, reference, difficulty, images, status, writer, correctChoice } = req.body;
+    const { category, subject, topic, subtopic, question, choices, explanations, reference, difficulty, images, status, writer, correctChoice } = req.body;
     let writerId = (req as any).user?.id;
     const user = (req as any).user;
     // If admin and writer is provided, use that
@@ -16,6 +16,7 @@ export const createSubmission: RequestHandler = async (req, res) => {
       category,
       subject,
       topic,
+      subtopic,
       question,
       choices,
       explanations,

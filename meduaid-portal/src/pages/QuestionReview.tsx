@@ -239,6 +239,9 @@ const QuestionReview: React.FC = () => {
                         <div><span className="font-semibold">Writer:</span> {detailsModal.question.writer?.name || '-'}</div>
                         <div><span className="font-semibold">Subject:</span> {detailsModal.question.subject}</div>
                         <div><span className="font-semibold">Topic:</span> {detailsModal.question.topic}</div>
+                        {detailsModal.question.subtopic && (
+                          <div><span className="font-semibold">Subtopic:</span> {detailsModal.question.subtopic}</div>
+                        )}
                         <div><span className="font-semibold">Reference:</span> {detailsModal.question.reference}</div>
                       </div>
                       <div className="space-y-3">
@@ -345,6 +348,9 @@ const QuestionReview: React.FC = () => {
                       <div className="mb-2"><span className="font-semibold">Writer:</span> {detailsModal.question.writer?.name || '-'}</div>
                       <div className="mb-2"><span className="font-semibold">Subject:</span> {detailsModal.question.subject}</div>
                       <div className="mb-2"><span className="font-semibold">Topic:</span> {detailsModal.question.topic}</div>
+                      {detailsModal.question.subtopic && (
+                        <div className="mb-2"><span className="font-semibold">Subtopic:</span> {detailsModal.question.subtopic}</div>
+                      )}
                       <div className="mb-2"><span className="font-semibold">Reference:</span>
                         <input className="w-full px-2 py-1 border rounded bg-white text-gray-900" value={editData.reference} onChange={e => setEditData((d: any) => ({ ...d, reference: e.target.value }))} />
                       </div>
