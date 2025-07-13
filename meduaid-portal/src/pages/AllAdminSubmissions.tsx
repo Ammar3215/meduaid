@@ -64,7 +64,7 @@ const AllAdminSubmissions: React.FC = () => {
           return;
         }
         const data = await response.json();
-        setQuestions(data);
+        setQuestions(Array.isArray(data) ? data : data.submissions || []);
         // Extract unique writers
         const uniqueWriters: string[] = Array.from(new Set(data.map((q: any) => q.writer?.name).filter((n: any): n is string => Boolean(n))));
         setWriters(uniqueWriters);
@@ -199,7 +199,13 @@ const AllAdminSubmissions: React.FC = () => {
               </label>
               <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900" value={subject} onChange={e => { setSubject(e.target.value); setTopic('All'); }}>
                 <option value="All">All</option>
-                {Object.keys((subjectsStructure as Record<string, any>)[category] || {}).map(subj => <option key={subj} value={subj}>{subj}</option>)}
+                {(
+                  category === 'All'
+                    ? []
+                    : Object.keys((subjectsStructure as Record<string, any>)[category] || {})
+                ).map(subj => (
+                  <option key={subj} value={subj}>{subj}</option>
+                ))}
               </select>
             </div>
             <div className="flex flex-col min-w-[160px]">
@@ -208,9 +214,15 @@ const AllAdminSubmissions: React.FC = () => {
               </label>
               <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900" value={topic} onChange={e => setTopic(e.target.value)}>
                 <option value="All">All</option>
-                {Array.isArray(((subjectsStructure as Record<string, any>)[category] as Record<string, any>)[subject])
-                  ? ((subjectsStructure as Record<string, any>)[category] as Record<string, any>)[subject].map((t: string) => <option key={t} value={t}>{t}</option>)
-                  : Object.keys(((subjectsStructure as Record<string, any>)[category] as Record<string, any>)[subject] || {}).map((t: string) => <option key={t} value={t}>{t}</option>)}
+                {(
+                  category === 'All' || subject === 'All'
+                    ? []
+                    : Array.isArray(((subjectsStructure as Record<string, any>)[category] as Record<string, any>)[subject])
+                      ? ((subjectsStructure as Record<string, any>)[category] as Record<string, any>)[subject] as string[]
+                      : Object.keys(((subjectsStructure as Record<string, any>)[category] as Record<string, any>)[subject] || {})
+                ).map((t: string) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
               </select>
             </div>
             <div className="flex flex-col min-w-[160px]">
@@ -271,7 +283,7 @@ const AllAdminSubmissions: React.FC = () => {
                           <span>{q.writer?.name || '-'}</span>
                         </div>
                       </td>
-                      <td className="py-3 px-6">{q.subject} / {q.topic}</td>
+                      <td className="py-3 px-6">{(q.subject || '-') + ' / ' + (q.topic || '-')}</td>
                       <td className="py-3 px-6">
                         <Tooltip text={
                           q.status === 'approved' ? 'This question is approved.' :
