@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../context/AuthContext';
 import Skeleton from '../components/Skeleton';
+import { subjectsStructure } from '../utils/subjectsStructure';
 
 type EditFormInputs = {
   question: string;
@@ -55,6 +56,12 @@ const EditQuestions: React.FC = () => {
     },
   });
 
+  // Add state for category, subject, topic, subtopic
+  const [editCategory, setEditCategory] = useState('');
+  const [editSubject, setEditSubject] = useState('');
+  const [editTopic, setEditTopic] = useState('');
+  const [editSubtopic, setEditSubtopic] = useState('');
+
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
   useEffect(() => {
@@ -91,6 +98,10 @@ const EditQuestions: React.FC = () => {
       reference: q.reference,
       images: null,
     });
+    setEditCategory(q.category);
+    setEditSubject(q.subject);
+    setEditTopic(q.topic);
+    setEditSubtopic(q.subtopic || '');
     setImagePreviews((q.images || []).map((img: string) => `${API_BASE_URL}${img}`));
     setFormImages(null);
   };
@@ -104,6 +115,10 @@ const EditQuestions: React.FC = () => {
         const formData = new FormData();
         Array.from(formImages).forEach(file => formData.append('images', file));
         // Add other fields
+        formData.append('category', editCategory);
+        formData.append('subject', editSubject);
+        formData.append('topic', editTopic);
+        formData.append('subtopic', editSubtopic);
         formData.append('question', data.question);
         data.choices.forEach((c: string, i: number) => formData.append(`choices[${i}]`, c));
         data.explanations.forEach((e: string, i: number) => formData.append(`explanations[${i}]`, e));
@@ -117,19 +132,24 @@ const EditQuestions: React.FC = () => {
         if (!res.ok) throw new Error('Failed to update question');
       } else {
         // No image change
+        const payload = {
+          category: editCategory,
+          subject: editSubject,
+          topic: editTopic,
+          subtopic: editSubtopic,
+          question: data.question,
+          choices: data.choices,
+          explanations: data.explanations,
+          reference: data.reference,
+          status: data.status === 'draft' ? 'draft' : 'pending',
+        };
         const res = await fetch(`${API_BASE_URL}/api/submissions/${editingId}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${jwt}`,
           },
-          body: JSON.stringify({
-            question: data.question,
-            choices: data.choices,
-            explanations: data.explanations,
-            reference: data.reference,
-            status: data.status === 'draft' ? 'draft' : 'pending',
-          }),
+          body: JSON.stringify(payload),
         });
         if (!res.ok) throw new Error('Failed to update question');
       }
@@ -137,6 +157,22 @@ const EditQuestions: React.FC = () => {
       setEditingId(null);
       setImagePreviews([]);
       setFormImages(null);
+    } catch (err: any) {
+      setError(err.message || 'Network error');
+    }
+  };
+
+  // Delete handler
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this question? This action cannot be undone.')) return;
+    setError('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      if (!res.ok) throw new Error('Failed to delete question');
+      setQuestions(prev => prev.filter(q => q._id !== id));
     } catch (err: any) {
       setError(err.message || 'Network error');
     }
@@ -187,16 +223,99 @@ const EditQuestions: React.FC = () => {
                 </div>
               )}
               <div className="flex justify-end mt-2">
-                <button
-                  className="bg-primary text-white px-4 py-1.5 rounded font-semibold hover:bg-primary-dark transition"
-                  onClick={() => startEdit(q)}
-                  disabled={!!editingId && editingId !== q._id}
-                >
-                  {q.status === 'rejected' ? 'Edit & Resubmit' : 'Edit Draft'}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    className="bg-primary text-white px-4 py-1.5 rounded font-semibold hover:bg-primary-dark transition"
+                    onClick={() => startEdit(q)}
+                    disabled={!!editingId && editingId !== q._id}
+                  >
+                    {q.status === 'rejected' ? 'Edit & Resubmit' : 'Edit Draft'}
+                  </button>
+                  <button
+                    className="bg-red-500 text-white px-4 py-1.5 rounded font-semibold hover:bg-red-600 transition"
+                    onClick={() => handleDelete(q._id)}
+                    disabled={!!editingId}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
               {editingId === q._id && (
                 <form onSubmit={handleSubmit(onSubmit)} className="mt-4 bg-white rounded-xl shadow-inner p-4 flex flex-col gap-4">
+                  <div>
+                    <label className="block mb-1 font-medium">Category</label>
+                    <select
+                      className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900"
+                      value={editCategory}
+                      onChange={e => {
+                        setEditCategory(e.target.value);
+                        setEditSubject('');
+                        setEditTopic('');
+                        setEditSubtopic('');
+                      }}
+                    >
+                      <option value="">Select Category</option>
+                      {Object.keys(subjectsStructure).map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block mb-1 font-medium">Subject</label>
+                    <select
+                      className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900"
+                      value={editSubject}
+                      onChange={e => {
+                        setEditSubject(e.target.value);
+                        setEditTopic('');
+                        setEditSubtopic('');
+                      }}
+                      disabled={!editCategory}
+                    >
+                      <option value="">Select Subject</option>
+                      {editCategory && Object.keys((subjectsStructure as Record<string, any>)[editCategory] || {}).map(subj => (
+                        <option key={subj} value={subj}>{subj}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block mb-1 font-medium">Topic</label>
+                    <select
+                      className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900"
+                      value={editTopic}
+                      onChange={e => {
+                        setEditTopic(e.target.value);
+                        setEditSubtopic('');
+                      }}
+                      disabled={!editSubject}
+                    >
+                      <option value="">Select Topic</option>
+                      {editCategory && editSubject && (
+                        Array.isArray(((subjectsStructure as Record<string, any>)[editCategory] as Record<string, any>)[editSubject])
+                          ? ((subjectsStructure as Record<string, any>)[editCategory] as Record<string, any>)[editSubject].map((topic: string) => (
+                              <option key={topic} value={topic}>{topic}</option>
+                            ))
+                          : Object.keys(((subjectsStructure as Record<string, any>)[editCategory] as Record<string, any>)[editSubject] || {}).map(topic => (
+                              <option key={topic} value={topic}>{topic}</option>
+                            ))
+                      )}
+                    </select>
+                  </div>
+                  {editCategory && editSubject && editTopic && Array.isArray((((subjectsStructure as Record<string, any>)[editCategory] as Record<string, any>)[editSubject] as Record<string, any>)[editTopic]) && (
+                    <div>
+                      <label className="block mb-1 font-medium">Subtopic</label>
+                      <select
+                        className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900"
+                        value={editSubtopic}
+                        onChange={e => setEditSubtopic(e.target.value)}
+                      >
+                        <option value="">Select Subtopic</option>
+                        {(((subjectsStructure as Record<string, any>)[editCategory] as Record<string, any>)[editSubject] as Record<string, any>)[editTopic].map((sub: string) => (
+                          <option key={sub} value={sub}>{sub}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div>
                     <label className="block mb-1 font-medium">Question</label>
                     <textarea {...register('question', { required: 'Question is required', minLength: { value: 10, message: 'At least 10 characters' } })} className="w-full px-4 py-2 border rounded-lg min-h-[80px] bg-white text-gray-900" />
@@ -296,7 +415,7 @@ const EditQuestions: React.FC = () => {
                     >
                       Cancel
                     </button>
-                    {q.status === 'draft' && (
+                    {questions.find(q => q._id === editingId)?.status === 'draft' && (
                       <button
                         type="button"
                         className="bg-yellow-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-yellow-600 transition"
@@ -311,7 +430,7 @@ const EditQuestions: React.FC = () => {
                       className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-dark transition"
                       disabled={isSubmitting}
                     >
-                      {isSubmitting ? (q.status === 'draft' ? 'Submitting...' : 'Resubmitting...') : (q.status === 'draft' ? 'Submit' : 'Resubmit')}
+                      {isSubmitting ? (questions.find(q => q._id === editingId)?.status === 'draft' ? 'Submitting...' : 'Resubmitting...') : (questions.find(q => q._id === editingId)?.status === 'draft' ? 'Submit' : 'Resubmit')}
                     </button>
                   </div>
                 </form>
@@ -324,4 +443,4 @@ const EditQuestions: React.FC = () => {
   );
 };
 
-export default EditQuestions; 
+export default EditQuestions;

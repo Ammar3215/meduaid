@@ -45,7 +45,9 @@ const SubmissionSchema = new mongoose_1.Schema({
     reference: { type: String, required: true },
     difficulty: { type: String, enum: ['easy', 'normal', 'hard'], required: true },
     images: { type: [String], default: [] },
-    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+    status: { type: String, enum: ['pending', 'approved', 'rejected', 'draft'], default: 'pending' },
     rejectionReason: { type: String },
+    correctChoice: { type: Number, required: true },
+    subtopic: { type: String },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Submission', SubmissionSchema);

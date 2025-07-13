@@ -29,12 +29,14 @@ const getStats = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const submissionsByStatus = yield Submission_1.default.aggregate([
             { $group: { _id: '$status', count: { $sum: 1 } } }
         ]);
-        const recentSubmissions = yield Submission_1.default.find().sort({ createdAt: -1 }).limit(5).populate('writer', 'name email');
+        const allSubmissions = yield Submission_1.default.find().sort({ createdAt: -1 }).populate('writer', 'name email');
+        const recentSubmissions = allSubmissions.slice(0, 5);
         res.json({
             totalUsers,
             totalSubmissions,
             submissionsByStatus,
-            recentSubmissions
+            recentSubmissions,
+            allSubmissions
         });
         return;
     }

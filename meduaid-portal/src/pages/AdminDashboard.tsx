@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { subjectsStructure } from '../utils/subjectsStructure';
 import QuestionViewModal from '../components/QuestionViewModal';
 import Skeleton from '../components/Skeleton';
+import { AdminEditQuestionForm } from './AllAdminSubmissions';
 
 const COLORS = [
   '#4B47B6', // deep purple
@@ -542,68 +543,24 @@ const AdminDashboard: React.FC = () => {
                 </button>
               </div>
             )}
-            {isEditing && (
-              <form className="space-y-4 text-left" onSubmit={e => { e.preventDefault(); handleSaveEdit(); }}>
-                <div>
-                  <label className="font-semibold block mb-1">Subject:</label>
-                  <input type="text" className="w-full border rounded px-2 py-1 bg-white text-gray-900" value={editData.subject} onChange={e => setEditData({ ...editData, subject: e.target.value })} required />
-                </div>
-                <div>
-                  <label className="font-semibold block mb-1">Topic:</label>
-                  <input type="text" className="w-full border rounded px-2 py-1 bg-white text-gray-900" value={editData.topic} onChange={e => setEditData({ ...editData, topic: e.target.value })} required />
-                </div>
-                <div>
-                  <label className="font-semibold block mb-1">Question:</label>
-                  <textarea className="w-full border rounded px-2 py-1 bg-white text-gray-900" value={editData.question} onChange={e => setEditData({ ...editData, question: e.target.value })} required rows={3} />
-                </div>
-                <div>
-                  <label className="font-semibold block mb-1">Choices:</label>
-                  {editData.choices?.map((c: string, i: number) => (
-                    <div key={i} className="flex gap-2 mb-1">
-                      <input type="text" className="flex-1 border rounded px-2 py-1 bg-white text-gray-900" value={c} onChange={e => {
-                        const newChoices = [...editData.choices];
-                        newChoices[i] = e.target.value;
-                        setEditData({ ...editData, choices: newChoices });
-                      }} required />
-                      <button type="button" className="text-red-500 font-bold" onClick={() => {
-                        const newChoices = editData.choices.filter((_: any, idx: number) => idx !== i);
-                        setEditData({ ...editData, choices: newChoices });
-                      }}>×</button>
-                    </div>
-                  ))}
-                  <button type="button" className="text-primary font-semibold mt-1" onClick={() => setEditData({ ...editData, choices: [...(editData.choices || []), ''] })}>+ Add Choice</button>
-                </div>
-                <div>
-                  <label className="font-semibold block mb-1">Explanations:</label>
-                  {editData.explanations?.map((e: string, i: number) => (
-                    <div key={i} className="flex gap-2 mb-1">
-                      <input type="text" className="flex-1 border rounded px-2 py-1 bg-white text-gray-900" value={e} onChange={ev => {
-                        const newExps = [...editData.explanations];
-                        newExps[i] = ev.target.value;
-                        setEditData({ ...editData, explanations: newExps });
-                      }} required />
-                      <button type="button" className="text-red-500 font-bold" onClick={() => {
-                        const newExps = editData.explanations.filter((_: any, idx: number) => idx !== i);
-                        setEditData({ ...editData, explanations: newExps });
-                      }}>×</button>
-                    </div>
-                  ))}
-                  <button type="button" className="text-primary font-semibold mt-1" onClick={() => setEditData({ ...editData, explanations: [...(editData.explanations || []), ''] })}>+ Add Explanation</button>
-                </div>
-                <div>
-                  <label className="font-semibold block mb-1">Reference:</label>
-                  <input type="text" className="w-full border rounded px-2 py-1 bg-white text-gray-900" value={editData.reference} onChange={e => setEditData({ ...editData, reference: e.target.value })} />
-                </div>
-                <div>
-                  <label className="font-semibold block mb-1">Rejection Reason:</label>
-                  <input type="text" className="w-full border rounded px-2 py-1 bg-white text-gray-900" value={editData.rejectionReason || ''} onChange={e => setEditData({ ...editData, rejectionReason: e.target.value })} />
-                </div>
-                {editError && <div className="text-red-500 text-sm">{editError}</div>}
-                <div className="flex justify-end gap-2 mt-4">
-                  <button type="button" className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition" onClick={handleCancelEdit} disabled={editLoading}>Cancel</button>
-                  <button type="submit" className="px-4 py-2 rounded bg-primary text-white font-semibold hover:bg-primary-dark transition disabled:opacity-60" disabled={editLoading}>{editLoading ? 'Saving...' : 'Save'}</button>
-                </div>
-              </form>
+            {isEditing && selectedSubmission && (
+              <AdminEditQuestionForm
+                submission={selectedSubmission}
+                onClose={() => { setIsEditing(false); setEditData(null); }}
+                onSave={updated => {
+                  setStats((prev: any) => {
+                    if (!prev) return prev;
+                    const updatedSubmissions = prev.allSubmissions.map((q: any) =>
+                      q._id === updated._id ? { ...q, ...updated } : q
+                    );
+                    return { ...prev, allSubmissions: updatedSubmissions };
+                  });
+                  setSelectedSubmission(updated);
+                  setIsEditing(false);
+                  setEditData(null);
+                }}
+                jwt={jwt || ''}
+              />
             )}
           </QuestionViewModal>
         )}
