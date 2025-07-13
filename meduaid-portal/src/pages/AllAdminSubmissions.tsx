@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { subjectsStructure } from '../utils/subjectsStructure';
 import { useAuth } from '../context/AuthContext';
-import { FunnelIcon, UserGroupIcon, CalendarDaysIcon, BookOpenIcon, TagIcon } from '@heroicons/react/24/outline';
+import { FunnelIcon, UserGroupIcon, CalendarDaysIcon, BookOpenIcon, TagIcon, EyeIcon, TrashIcon } from '@heroicons/react/24/outline';
 import QuestionViewModal from '../components/QuestionViewModal';
 
 const categories = Object.keys(subjectsStructure);
@@ -22,9 +22,9 @@ function Tooltip({ children, text }: { children: React.ReactNode, text: string }
   const [show, setShow] = React.useState(false);
   return (
     <span className="relative" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)} onFocus={() => setShow(true)} onBlur={() => setShow(false)} tabIndex={0}>
-      {children}
+      <span className="pointer-events-auto">{children}</span>
       {show && (
-        <span className="absolute z-20 left-1/2 -translate-x-1/2 mt-2 px-2 py-1 rounded bg-gray-800 text-white text-xs whitespace-nowrap shadow-lg">
+        <span className="absolute z-20 left-1/2 -translate-x-1/2 mt-2 px-2 py-1 rounded bg-gray-800 text-white text-xs whitespace-nowrap shadow-lg pointer-events-none">
           {text}
         </span>
       )}
@@ -56,6 +56,7 @@ const AllAdminSubmissions: React.FC = () => {
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState('');
   const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     const fetchSubmissions = async () => {
@@ -124,6 +125,25 @@ const AllAdminSubmissions: React.FC = () => {
       setModalError('Network error.');
     }
     setModalLoading(false);
+  };
+
+  // Delete handler for admin
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this question? This action cannot be undone.')) return;
+    setError('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      if (!res.ok) throw new Error('Failed to delete question');
+      setQuestions(prev => prev.filter(q => q._id !== id));
+      setModalOpen(false);
+      setSuccessMessage('Question deleted successfully');
+      setTimeout(() => setSuccessMessage(''), 2000);
+    } catch (err: any) {
+      setError(err.message || 'Network error');
+    }
   };
 
   const filtered = questions.filter(q =>
@@ -296,20 +316,37 @@ const AllAdminSubmissions: React.FC = () => {
                           </>
                         ) : '-'}
                       </td>
-                      <td className="py-3 px-6 text-right">
-                        <button
-                          className="bg-primary text-white px-4 py-2 rounded font-semibold hover:bg-primary-dark transition"
-                          aria-label="View submission"
-                          type="button"
-                          onClick={() => handleViewClick(q._id)}
-                        >
-                          View
-                        </button>
+                      <td className="py-3 px-6 text-right flex gap-2 justify-end items-center">
+                        <Tooltip text="View Submission">
+                          <button
+                            className="inline-flex items-center justify-center bg-gray-100 border border-gray-300 text-primary rounded-full p-2 hover:bg-primary hover:text-white hover:border-primary transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                            aria-label="View submission"
+                            type="button"
+                            onClick={() => handleViewClick(q._id)}
+                          >
+                            <EyeIcon className="w-5 h-5" />
+                          </button>
+                        </Tooltip>
+                        <Tooltip text="Delete Submission">
+                          <button
+                            className="inline-flex items-center justify-center bg-gray-100 border border-gray-300 text-red-500 rounded-full p-2 hover:bg-red-500 hover:text-white hover:border-red-500 transition focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                            aria-label="Delete submission"
+                            type="button"
+                            onClick={() => handleDelete(q._id)}
+                          >
+                            <TrashIcon className="w-5 h-5" />
+                          </button>
+                        </Tooltip>
                       </td>
                     </tr>
                   ))}
               </tbody>
             </table>
+          </div>
+        )}
+        {successMessage && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-2 rounded shadow-lg z-50 text-center">
+            {successMessage}
           </div>
         )}
         {/* Modal for viewing submission */}
@@ -360,6 +397,13 @@ const AllAdminSubmissions: React.FC = () => {
                 >
                   Edit
                 </button>
+                <button
+                  className="bg-red-500 text-white px-4 py-2 rounded font-semibold hover:bg-red-600 transition mt-2"
+                  onClick={() => handleDelete(selectedSubmission._id)}
+                  disabled={modalLoading}
+                >
+                  Delete
+                </button>
               </div>
             )}
             {modalMode === 'edit' && selectedSubmission && (
@@ -396,20 +440,49 @@ function AdminEditQuestionForm({ submission, onClose, onSave, jwt }: { submissio
         : Object.keys(((subjectsStructure as Record<string, any>)[form.category] as Record<string, any>)[form.subject] || {}))
     : [];
 
+  // In AdminEditQuestionForm, add state for category, subject, topic, subtopic
+  const [editCategory, setEditCategory] = React.useState(form.category || '');
+  const [editSubject, setEditSubject] = React.useState(form.subject || '');
+  const [editTopic, setEditTopic] = React.useState(form.topic || '');
+  const [editSubtopic, setEditSubtopic] = React.useState(form.subtopic || '');
+
   const handleChange = (field: string, value: any) => {
     setForm((f: any) => ({ ...f, [field]: value }));
   };
   const handleArrayChange = (field: string, idx: number, value: string) => {
     setForm((f: any) => ({ ...f, [field]: f[field].map((v: string, i: number) => i === idx ? value : v) }));
   };
+  const handleCategoryChange = (value: string) => {
+    setEditCategory(value);
+    setEditSubject('');
+    setEditTopic('');
+    setEditSubtopic('');
+    setForm((f: any) => ({ ...f, category: value, subject: '', topic: '', subtopic: '' }));
+  };
+  const handleSubjectChange = (value: string) => {
+    setEditSubject(value);
+    setEditTopic('');
+    setEditSubtopic('');
+    setForm((f: any) => ({ ...f, subject: value, topic: '', subtopic: '' }));
+  };
+  const handleTopicChange = (value: string) => {
+    setEditTopic(value);
+    setEditSubtopic('');
+    setForm((f: any) => ({ ...f, topic: value, subtopic: '' }));
+  };
+  const handleSubtopicChange = (value: string) => {
+    setEditSubtopic(value);
+    setForm((f: any) => ({ ...f, subtopic: value }));
+  };
   const handleSave = async () => {
     setSaving(true);
     setError('');
     try {
       const payload = {
-        category: form.category,
-        subject: form.subject,
-        topic: form.topic,
+        category: editCategory,
+        subject: editSubject,
+        topic: editTopic,
+        subtopic: editSubtopic,
         question: form.question,
         choices: form.choices,
         explanations: form.explanations,
@@ -440,24 +513,66 @@ function AdminEditQuestionForm({ submission, onClose, onSave, jwt }: { submissio
     <form className="space-y-4" onSubmit={e => { e.preventDefault(); handleSave(); }}>
       <div>
         <label className="block mb-1 font-medium">Category</label>
-        <select value={form.category} onChange={e => handleChange('category', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900">
-          {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+        <select
+          className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900"
+          value={editCategory}
+          onChange={e => handleCategoryChange(e.target.value)}
+        >
+          <option value="">Select Category</option>
+          {Object.keys(subjectsStructure).map(cat => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
         </select>
       </div>
       <div>
         <label className="block mb-1 font-medium">Subject</label>
-        <select value={form.subject} onChange={e => handleChange('subject', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900">
+        <select
+          className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900"
+          value={editSubject}
+          onChange={e => handleSubjectChange(e.target.value)}
+          disabled={!editCategory}
+        >
           <option value="">Select Subject</option>
-          {subjects.map(subj => <option key={subj} value={subj}>{subj}</option>)}
+          {editCategory && Object.keys((subjectsStructure as Record<string, any>)[editCategory] || {}).map(subj => (
+            <option key={subj} value={subj}>{subj}</option>
+          ))}
         </select>
       </div>
       <div>
         <label className="block mb-1 font-medium">Topic</label>
-        <select value={form.topic} onChange={e => handleChange('topic', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900">
+        <select
+          className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900"
+          value={editTopic}
+          onChange={e => handleTopicChange(e.target.value)}
+          disabled={!editSubject}
+        >
           <option value="">Select Topic</option>
-          {(topics as string[]).map(topic => <option key={topic} value={topic}>{topic}</option>)}
+          {editCategory && editSubject && (
+            Array.isArray(((subjectsStructure as Record<string, any>)[editCategory] as Record<string, any>)[editSubject])
+              ? ((subjectsStructure as Record<string, any>)[editCategory] as Record<string, any>)[editSubject].map((topic: string) => (
+                  <option key={topic} value={topic}>{topic}</option>
+                ))
+              : Object.keys(((subjectsStructure as Record<string, any>)[editCategory] as Record<string, any>)[editSubject] || {}).map(topic => (
+                  <option key={topic} value={topic}>{topic}</option>
+                ))
+          )}
         </select>
       </div>
+      {editCategory && editSubject && editTopic && Array.isArray((((subjectsStructure as Record<string, any>)[editCategory] as Record<string, any>)[editSubject] as Record<string, any>)[editTopic]) && (
+        <div>
+          <label className="block mb-1 font-medium">Subtopic</label>
+          <select
+            className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900"
+            value={editSubtopic}
+            onChange={e => handleSubtopicChange(e.target.value)}
+          >
+            <option value="">Select Subtopic</option>
+            {(((subjectsStructure as Record<string, any>)[editCategory] as Record<string, any>)[editSubject] as Record<string, any>)[editTopic].map((sub: string) => (
+              <option key={sub} value={sub}>{sub}</option>
+            ))}
+          </select>
+        </div>
+      )}
       <div>
         <label className="block mb-1 font-medium">Question</label>
         <textarea value={form.question} onChange={e => handleChange('question', e.target.value)} className="w-full px-4 py-2 border rounded-lg min-h-[80px] bg-white text-gray-900" />
@@ -522,3 +637,4 @@ function AdminEditQuestionForm({ submission, onClose, onSave, jwt }: { submissio
 }
 
 export default AllAdminSubmissions;
+export { AdminEditQuestionForm };

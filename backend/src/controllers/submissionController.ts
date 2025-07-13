@@ -140,6 +140,36 @@ export const updateSubmissionStatus: RequestHandler = async (req, res) => {
   }
 };
 
+// Delete a submission (question)
+export const deleteSubmission: RequestHandler = async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const { id } = req.params;
+    const submission = await Submission.findById(id);
+    if (!submission) {
+      res.status(404).json({ message: 'Submission not found' });
+      return;
+    }
+    if (user?.role === 'admin') {
+      await Submission.findByIdAndDelete(id);
+      res.json({ message: 'Submission deleted' });
+      return;
+    }
+    if (
+      user?.role === 'writer' &&
+      submission.writer.toString() === user.id &&
+      ['draft', 'rejected', 'pending'].includes(submission.status)
+    ) {
+      await Submission.findByIdAndDelete(id);
+      res.json({ message: 'Submission deleted' });
+      return;
+    }
+    res.status(403).json({ message: 'Forbidden' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // Get a single submission by ID
 export const getSubmissionById: RequestHandler = async (req, res) => {
   try {

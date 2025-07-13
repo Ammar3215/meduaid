@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth';
-import { createSubmission, getSubmissions, updateSubmissionStatus, getSubmissionById } from '../controllers/submissionController';
+import { createSubmission, getSubmissions, updateSubmissionStatus, getSubmissionById, deleteSubmission } from '../controllers/submissionController';
 import Submission from '../models/Submission';
 import multer from 'multer';
 import path from 'path';
@@ -21,6 +21,7 @@ const upload = multer({ storage });
 router.post('/', authenticate, createSubmission);
 router.get('/', authenticate, getSubmissions);
 router.patch('/:id', authenticate, updateSubmissionStatus);
+router.delete('/:id', authenticate, deleteSubmission);
 
 // GET /api/submissions/:id - fetch a single submission by ID
 router.get('/:id', authenticate, async (req, res) => {

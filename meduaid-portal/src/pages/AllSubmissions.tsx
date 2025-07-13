@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Skeleton from '../components/Skeleton';
 import { subjectsStructure } from '../utils/subjectsStructure';
+import { TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
 
 interface Submission {
   _id: string;
@@ -68,6 +69,21 @@ function getSubjectsForCategory(category: string) {
   return Object.keys((subjectsStructure as Record<string, any>)[category] || {});
 }
 
+// Tooltip component for consistent UX
+function Tooltip({ children, text }: { children: React.ReactNode, text: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <span className="relative" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)} onFocus={() => setShow(true)} onBlur={() => setShow(false)} tabIndex={0}>
+      <span className="pointer-events-auto">{children}</span>
+      {show && (
+        <span className="absolute z-20 left-1/2 -translate-x-1/2 mt-2 px-2 py-1 rounded bg-gray-800 text-white text-xs whitespace-nowrap shadow-lg pointer-events-none">
+          {text}
+        </span>
+      )}
+    </span>
+  );
+}
+
 const AllSubmissions: React.FC = () => {
   const { jwt } = useAuth();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -84,6 +100,7 @@ const AllSubmissions: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   const subjects = getSubjectsForCategory(categoryFilter);
   const topics = subjectFilter !== 'All' ? getTopicsForSubject(subjectFilter) : [];
@@ -150,6 +167,23 @@ const AllSubmissions: React.FC = () => {
       setModalError('Network error.');
     }
     setModalLoading(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this question? This action cannot be undone.')) return;
+    setError('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      if (!res.ok) throw new Error('Failed to delete question');
+      setSubmissions(prev => prev.filter(q => q._id !== id));
+      setSuccessMessage('Question deleted successfully');
+      setTimeout(() => setSuccessMessage(''), 2000);
+    } catch (err: any) {
+      setError(err.message || 'Network error');
+    }
   };
 
   return (
@@ -301,13 +335,29 @@ const AllSubmissions: React.FC = () => {
                   </td>
                   <td className="py-2 px-4 border">{new Date(sub.createdAt).toLocaleString()}</td>
                   <td className="py-2 px-4 border">{new Date(sub.updatedAt).toLocaleString()}</td>
-                  <td className="py-2 px-4 border">
-                    <button
-                      className="bg-primary text-white px-3 py-1 rounded font-semibold hover:bg-primary-dark"
-                      onClick={() => handleViewClick(sub._id)}
-                    >
-                      View
-                    </button>
+                  <td className="py-2 px-4 border flex gap-2 justify-end items-center">
+                    <Tooltip text="View Submission">
+                      <button
+                        className="inline-flex items-center justify-center bg-gray-100 border border-gray-300 text-primary rounded-full p-2 hover:bg-primary hover:text-white hover:border-primary transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                        aria-label="View submission"
+                        type="button"
+                        onClick={() => handleViewClick(sub._id)}
+                      >
+                        <EyeIcon className="w-5 h-5" />
+                      </button>
+                    </Tooltip>
+                    {(sub.status === 'draft' || sub.status === 'rejected' || sub.status === 'pending') && (
+                      <Tooltip text="Delete Submission">
+                        <button
+                          className="inline-flex items-center justify-center bg-gray-100 border border-gray-300 text-red-500 rounded-full p-2 hover:bg-red-500 hover:text-white hover:border-red-500 transition focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                          aria-label="Delete submission"
+                          type="button"
+                          onClick={() => handleDelete(sub._id)}
+                        >
+                          <TrashIcon className="w-5 h-5" />
+                        </button>
+                      </Tooltip>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -315,10 +365,15 @@ const AllSubmissions: React.FC = () => {
           </table>
         </div>
       )}
+      {successMessage && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-2 rounded shadow-lg z-50 text-center">
+          {successMessage}
+        </div>
+      )}
       {/* Modal for viewing submission */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-lg relative">
+          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-3xl relative">
             <button
               className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold"
               onClick={() => setModalOpen(false)}

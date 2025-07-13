@@ -29,20 +29,27 @@ const Submission_1 = __importDefault(require("../models/Submission"));
 const createSubmission = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {
-        const { category, subject, topic, question, choices, explanations, reference, difficulty, images } = req.body;
-        const writerId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+        const { category, subject, topic, subtopic, question, choices, explanations, reference, difficulty, images, status, writer, correctChoice } = req.body;
+        let writerId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+        const user = req.user;
+        // If admin and writer is provided, use that
+        if ((user === null || user === void 0 ? void 0 : user.role) === 'admin' && writer) {
+            writerId = writer;
+        }
         const submission = yield Submission_1.default.create({
             writer: writerId,
             category,
             subject,
             topic,
+            subtopic,
             question,
             choices,
             explanations,
             reference,
             difficulty,
             images: images || [],
-            status: 'pending',
+            status: status === 'draft' ? 'draft' : 'pending',
+            correctChoice,
         });
         res.status(201).json(submission);
     }
@@ -59,9 +66,30 @@ const getSubmissions = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const user = req.user;
         if ((user === null || user === void 0 ? void 0 : user.role) === 'writer') {
             filter.writer = user.id;
+            if (status) {
+                // Support comma-separated status (e.g., 'rejected,draft')
+                const statusArr = String(status).split(',');
+                filter.status = { $in: statusArr };
+            }
         }
-        else if (writer) {
-            filter.writer = writer;
+        else if ((user === null || user === void 0 ? void 0 : user.role) === 'admin') {
+            if (status) {
+                // Only show drafts if explicitly requested
+                const statusArr = String(status).split(',');
+                if (!statusArr.includes('draft')) {
+                    filter.status = { $in: statusArr.filter(s => s !== 'draft') };
+                }
+                else {
+                    filter.status = { $in: statusArr };
+                }
+            }
+            else {
+                // By default, exclude drafts for admin
+                filter.status = { $ne: 'draft' };
+            }
+            if (writer) {
+                filter.writer = writer;
+            }
         }
         if (category)
             filter.category = category;
@@ -69,8 +97,6 @@ const getSubmissions = (req, res) => __awaiter(void 0, void 0, void 0, function*
             filter.subject = subject;
         if (topic)
             filter.topic = topic;
-        if (status)
-            filter.status = status;
         const submissions = yield Submission_1.default.find(filter).populate('writer', 'name email');
         res.json(submissions);
     }
@@ -112,15 +138,19 @@ const updateSubmissionStatus = (req, res) => __awaiter(void 0, void 0, void 0, f
             res.json(updated);
             return;
         }
-        // Writers can only update their own rejected submissions (to resubmit)
+        // Writers can update their own rejected or draft submissions
         if ((user === null || user === void 0 ? void 0 : user.role) === 'writer' &&
             submission.writer.toString() === user.id &&
-            submission.status === 'rejected') {
-            // Only allow updating question fields and set status to 'pending'
-            const allowedFields = {
-                status: 'pending',
-                rejectionReason: '',
-            };
+            (submission.status === 'rejected' || submission.status === 'draft')) {
+            let allowedFields = {};
+            if (submission.status === 'rejected') {
+                allowedFields.status = 'pending';
+                allowedFields.rejectionReason = '';
+            }
+            else if (submission.status === 'draft') {
+                // Allow status to be set to 'pending' (submit) or remain 'draft' (save as draft)
+                allowedFields.status = status === 'pending' ? 'pending' : 'draft';
+            }
             if (rest.question !== undefined)
                 allowedFields.question = rest.question;
             if (rest.choices !== undefined)
