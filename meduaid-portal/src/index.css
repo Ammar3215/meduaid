@@ -6,6 +6,8 @@ html, body, #root {
   height: 100%;
   width: 100%;
   @apply h-full w-full;
+  background: #fff !important;
+  color: #222 !important;
 }
 
 :root {
