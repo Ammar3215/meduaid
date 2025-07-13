@@ -15,8 +15,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 const QuestionViewModal: React.FC<QuestionViewModalProps> = ({ open, onClose, question, loading, error, children }) => {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-xl shadow-lg p-10 w-full max-w-4xl relative max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40" style={{ colorScheme: 'light' }}>
+      <div className="bg-white rounded-xl shadow-lg p-10 w-full max-w-4xl relative max-h-[90vh] overflow-y-auto text-gray-900">
         <button
           className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold"
           onClick={onClose}

@@ -291,10 +291,10 @@ const QuestionSubmission: React.FC = () => {
           </select>
           {errors.difficulty && <p className="text-red-500 text-sm mt-1">{errors.difficulty.message}</p>}
         </div>
-        <div className="flex justify-end gap-4 mt-8">
+        <div className="flex flex-col md:flex-row justify-end gap-2 md:gap-4 mt-8">
           <button
             type="button"
-            className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-400 transition"
+            className="w-full md:w-auto bg-gray-300 text-gray-700 text-xs py-1.5 md:text-sm md:py-2 px-4 md:px-6 rounded-lg font-semibold hover:bg-gray-400 transition"
             disabled={isSubmitting || loading}
             onClick={handleSubmit(onSaveDraft)}
           >
@@ -302,7 +302,7 @@ const QuestionSubmission: React.FC = () => {
           </button>
           <button
             type="button"
-            className="bg-blue-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-600 transition"
+            className="w-full md:w-auto bg-blue-500 text-white text-xs py-1.5 md:text-sm md:py-2 px-4 md:px-6 rounded-lg font-semibold hover:bg-blue-600 transition"
             disabled={isSubmitting || loading}
             onClick={handleSubmit(onSubmitAndAddAnother)}
           >
@@ -310,7 +310,7 @@ const QuestionSubmission: React.FC = () => {
           </button>
           <button
             type="submit"
-            className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-dark transition"
+            className="w-full md:w-auto bg-primary text-white text-xs py-1.5 md:text-sm md:py-2 px-4 md:px-6 rounded-lg font-semibold hover:bg-primary-dark transition"
             disabled={isSubmitting || loading}
           >
             {loading ? 'Submitting...' : 'Submit'}
