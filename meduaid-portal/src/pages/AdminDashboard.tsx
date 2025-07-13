@@ -90,7 +90,6 @@ const AdminDashboard: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<any>(null);
   const [editLoading, setEditLoading] = useState(false);
-  const [editError, setEditError] = useState('');
 
   const [loading, setLoading] = useState(true);
 
@@ -189,50 +188,6 @@ const AdminDashboard: React.FC = () => {
   const handleEditClick = () => {
     setEditData({ ...selectedSubmission });
     setIsEditing(true);
-    setEditError('');
-  };
-
-  // Handler for canceling edit
-  const handleCancelEdit = () => {
-    setIsEditing(false);
-    setEditData(null);
-    setEditError('');
-  };
-
-  // Handler for saving edit
-  const handleSaveEdit = async () => {
-    setEditLoading(true);
-    setEditError('');
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/submissions/${selectedSubmission._id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${jwt}`,
-        },
-        body: JSON.stringify(editData),
-      });
-      if (!res.ok) {
-        setEditError('Failed to save changes.');
-        setEditLoading(false);
-        return;
-      }
-      const updated = await res.json();
-      setSelectedSubmission(updated);
-      setIsEditing(false);
-      setEditData(null);
-      // Update the dashboard table immediately
-      setStats((prev: any) => {
-        if (!prev) return prev;
-        const updatedSubmissions = prev.allSubmissions.map((q: any) =>
-          q._id === updated._id ? { ...q, ...updated } : q
-        );
-        return { ...prev, allSubmissions: updatedSubmissions };
-      });
-    } catch (err) {
-      setEditError('Network error.');
-    }
-    setEditLoading(false);
   };
 
   return (

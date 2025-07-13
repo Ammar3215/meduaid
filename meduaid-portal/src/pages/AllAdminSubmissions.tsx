@@ -4,9 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { FunnelIcon, UserGroupIcon, CalendarDaysIcon, BookOpenIcon, TagIcon, EyeIcon, TrashIcon } from '@heroicons/react/24/outline';
 import QuestionViewModal from '../components/QuestionViewModal';
 
-const categories = Object.keys(subjectsStructure);
-
-const allCategories = ['All', ...categories];
+const allCategories = ['All', ...Object.keys(subjectsStructure)];
 
 // Utility to convert array of objects to CSV
 function toCSV(rows: any[], columns: { label: string, key: string }[]) {
@@ -37,13 +35,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 const AllAdminSubmissions: React.FC = () => {
   const { jwt } = useAuth();
   const [category, setCategory] = useState('All');
-  const subjects = Object.keys((subjectsStructure as Record<string, any>)[category] || {});
   const [subject, setSubject] = useState('All');
-  const topics = subject !== 'All'
-    ? (Array.isArray(((subjectsStructure as Record<string, any>)[category] as Record<string, any>)[subject])
-        ? ((subjectsStructure as Record<string, any>)[category] as Record<string, any>)[subject]
-        : Object.keys(((subjectsStructure as Record<string, any>)[category] as Record<string, any>)[subject] || {}))
-    : [];
   const [topic, setTopic] = useState('All');
   const [writer, setWriter] = useState('All');
   const [date, setDate] = useState('');
@@ -207,7 +199,7 @@ const AllAdminSubmissions: React.FC = () => {
               </label>
               <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900" value={subject} onChange={e => { setSubject(e.target.value); setTopic('All'); }}>
                 <option value="All">All</option>
-                {subjects.map(subj => <option key={subj} value={subj}>{subj}</option>)}
+                {Object.keys((subjectsStructure as Record<string, any>)[category] || {}).map(subj => <option key={subj} value={subj}>{subj}</option>)}
               </select>
             </div>
             <div className="flex flex-col min-w-[160px]">
@@ -216,7 +208,9 @@ const AllAdminSubmissions: React.FC = () => {
               </label>
               <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900" value={topic} onChange={e => setTopic(e.target.value)}>
                 <option value="All">All</option>
-                {(topics as string[]).map((t: string) => <option key={t} value={t}>{t}</option>)}
+                {Array.isArray(((subjectsStructure as Record<string, any>)[category] as Record<string, any>)[subject])
+                  ? ((subjectsStructure as Record<string, any>)[category] as Record<string, any>)[subject].map((t: string) => <option key={t} value={t}>{t}</option>)
+                  : Object.keys(((subjectsStructure as Record<string, any>)[category] as Record<string, any>)[subject] || {}).map((t: string) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div className="flex flex-col min-w-[160px]">
