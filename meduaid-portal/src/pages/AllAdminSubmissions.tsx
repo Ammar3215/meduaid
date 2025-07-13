@@ -184,8 +184,8 @@ const AllAdminSubmissions: React.FC = () => {
       <div className="bg-white rounded-xl shadow-lg p-2 sm:p-8">
         {/* Enhanced Filters Section */}
         <div className="mb-8">
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-2 sm:p-6 flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-6 items-end shadow-sm">
-            <div className="flex flex-col min-w-[160px]">
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-2 sm:p-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:gap-6 items-stretch shadow-sm">
+            <div className="flex flex-col min-w-[160px] w-full sm:w-auto mb-2 sm:mb-0">
               <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700">
                 <TagIcon className="w-4 h-4 text-primary" /> Category
               </label>
@@ -193,7 +193,7 @@ const AllAdminSubmissions: React.FC = () => {
                 {allCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
               </select>
             </div>
-            <div className="flex flex-col min-w-[160px]">
+            <div className="flex flex-col min-w-[160px] w-full sm:w-auto mb-2 sm:mb-0">
               <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700">
                 <BookOpenIcon className="w-4 h-4 text-primary" /> Subject
               </label>
@@ -208,7 +208,7 @@ const AllAdminSubmissions: React.FC = () => {
                 ))}
               </select>
             </div>
-            <div className="flex flex-col min-w-[160px]">
+            <div className="flex flex-col min-w-[160px] w-full sm:w-auto mb-2 sm:mb-0">
               <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700">
                 <FunnelIcon className="w-4 h-4 text-primary" /> Topic
               </label>
@@ -225,7 +225,7 @@ const AllAdminSubmissions: React.FC = () => {
                 ))}
               </select>
             </div>
-            <div className="flex flex-col min-w-[160px]">
+            <div className="flex flex-col min-w-[160px] w-full sm:w-auto mb-2 sm:mb-0">
               <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700">
                 <UserGroupIcon className="w-4 h-4 text-primary" /> Writer
               </label>
@@ -234,7 +234,7 @@ const AllAdminSubmissions: React.FC = () => {
                 {writers.map(w => <option key={w} value={w}>{w}</option>)}
               </select>
             </div>
-            <div className="flex flex-col min-w-[160px]">
+            <div className="flex flex-col min-w-[160px] w-full sm:w-auto mb-2 sm:mb-0">
               <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700">
                 <CalendarDaysIcon className="w-4 h-4 text-primary" /> Date
               </label>

@@ -126,7 +126,7 @@ const QuestionReview: React.FC = () => {
 
   return (
     <>
-      <div className="w-full max-w-full max-w-6xl mx-auto px-2 md:px-6">
+      <div className="w-full max-w-full max-w-6xl mx-auto md:px-6">
         {toast && (
           <div className={`fixed top-6 right-6 z-[9999] px-6 py-3 rounded-lg shadow-lg text-white font-semibold transition-all duration-300
             ${toast.type === 'success' ? 'bg-green-500' : toast.type === 'error' ? 'bg-red-500' : 'bg-blue-500'}`}
@@ -135,32 +135,32 @@ const QuestionReview: React.FC = () => {
           </div>
         )}
         {/* Removed Question Review header and subtext as requested */}
-        <div className="w-full">
+        <div className="w-full block">
           {/* Enhanced Filters Section */}
           <div className="mb-8">
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-2 md:p-6 flex flex-col md:flex-row flex-wrap gap-2 md:gap-6 items-end shadow-sm">
-              <div className="flex flex-col min-w-[160px]">
-                <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700">
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-2 md:p-6 flex flex-col md:flex-row flex-wrap gap-2 md:gap-6 items-stretch shadow-sm">
+              <div className="flex flex-col w-full mb-1 md:mb-0">
+                <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700 text-left">
                   <TagIcon className="w-4 h-4 text-primary" /> Category
                 </label>
-                <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900" value={selectedCategory} onChange={e => { setSelectedCategory(e.target.value); setSelectedSubject('All'); setSelectedTopic('All'); }}>
+                <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900 w-full" value={selectedCategory} onChange={e => { setSelectedCategory(e.target.value); setSelectedSubject('All'); setSelectedTopic('All'); }}>
                   {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
               </div>
-              <div className="flex flex-col min-w-[160px]">
-                <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700">
+              <div className="flex flex-col w-full mb-1 md:mb-0">
+                <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700 text-left">
                   <BookOpenIcon className="w-4 h-4 text-primary" /> Subject
                 </label>
-                <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900" value={selectedSubject} onChange={e => { setSelectedSubject(e.target.value); setSelectedTopic('All'); }}>
+                <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900 w-full" value={selectedSubject} onChange={e => { setSelectedSubject(e.target.value); setSelectedTopic('All'); }}>
                   <option value="All">All</option>
                   {subjects.map(subj => <option key={subj} value={subj}>{subj}</option>)}
                 </select>
               </div>
-              <div className="flex flex-col min-w-[160px]">
-                <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700">
+              <div className="flex flex-col w-full mb-1 md:mb-0">
+                <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700 text-left">
                   <FunnelIcon className="w-4 h-4 text-primary" /> Topic
                 </label>
-                <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900" value={selectedTopic} onChange={e => setSelectedTopic(e.target.value)}>
+                <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900 w-full" value={selectedTopic} onChange={e => setSelectedTopic(e.target.value)}>
                   <option value="All">All</option>
                   {(topics as string[]).map((t: string) => <option key={t} value={t}>{t}</option>)}
                 </select>
