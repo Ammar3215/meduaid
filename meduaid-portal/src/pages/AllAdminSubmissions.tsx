@@ -426,14 +426,6 @@ function AdminEditQuestionForm({ submission, onClose, onSave, jwt }: { submissio
   });
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState('');
-  const categories = Object.keys(subjectsStructure);
-  const subjects = Object.keys((subjectsStructure as Record<string, any>)[form.category] || {});
-  const topics = form.subject
-    ? (Array.isArray(((subjectsStructure as Record<string, any>)[form.category] as Record<string, any>)[form.subject])
-        ? ((subjectsStructure as Record<string, any>)[form.category] as Record<string, any>)[form.subject]
-        : Object.keys(((subjectsStructure as Record<string, any>)[form.category] as Record<string, any>)[form.subject] || {}))
-    : [];
-
   // In AdminEditQuestionForm, add state for category, subject, topic, subtopic
   const [editCategory, setEditCategory] = React.useState(form.category || '');
   const [editSubject, setEditSubject] = React.useState(form.subject || '');
