@@ -88,7 +88,7 @@ const AdminDashboard: React.FC = () => {
 
   // Add state for editing and saving
   const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState<any>(null);
+  const [, setEditData] = useState<any>(null);
   const [editLoading, setEditLoading] = useState(false);
 
   const [loading, setLoading] = useState(true);
