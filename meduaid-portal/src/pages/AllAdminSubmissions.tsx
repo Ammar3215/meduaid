@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { subjectsStructure } from '../utils/subjectsStructure';
 import { useAuth } from '../context/AuthContext';
-import { FunnelIcon, UserGroupIcon, CalendarDaysIcon, BookOpenIcon, TagIcon, EyeIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { FunnelIcon, UserGroupIcon, CalendarDaysIcon, BookOpenIcon, TagIcon, EyeIcon, TrashIcon, CheckCircleIcon, XCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
 import QuestionViewModal from '../components/QuestionViewModal';
 
 const allCategories = ['All', ...Object.keys(subjectsStructure)];
@@ -49,6 +49,7 @@ const AllAdminSubmissions: React.FC = () => {
   const [modalError, setModalError] = useState('');
   const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
   const [successMessage, setSuccessMessage] = useState('');
+  const [allQuestions, setAllQuestions] = useState<any[]>([]); // for stats
 
   useEffect(() => {
     const fetchSubmissions = async () => {
@@ -65,6 +66,7 @@ const AllAdminSubmissions: React.FC = () => {
         }
         const data = await response.json();
         setQuestions(Array.isArray(data) ? data : data.submissions || []);
+        setAllQuestions(Array.isArray(data) ? data : data.submissions || []);
         // Extract unique writers
         const uniqueWriters: string[] = Array.from(new Set(data.map((q: any) => q.writer?.name).filter((n: any): n is string => Boolean(n))));
         setWriters(uniqueWriters);
@@ -241,6 +243,35 @@ const AllAdminSubmissions: React.FC = () => {
               <input type="date" className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900" value={date} onChange={e => setDate(e.target.value)} />
             </div>
           </div>
+        </div>
+        {/* Stats Card */}
+        <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          {(() => {
+            const total = allQuestions.length;
+            const approved = allQuestions.filter(q => q.status === 'approved').length;
+            const rejected = allQuestions.filter(q => q.status === 'rejected').length;
+            const pending = allQuestions.filter(q => q.status === 'pending').length;
+            return (
+              <>
+                <div className="flex flex-col items-center justify-center bg-blue-50 border-l-4 border-blue-500 rounded-lg shadow p-4">
+                  <span className="text-3xl font-bold text-blue-700">{total}</span>
+                  <span className="mt-1 text-sm font-medium text-blue-800 flex items-center gap-1"><BookOpenIcon className="w-5 h-5 text-blue-400" /> Total</span>
+                </div>
+                <div className="flex flex-col items-center justify-center bg-green-50 border-l-4 border-green-500 rounded-lg shadow p-4">
+                  <span className="text-3xl font-bold text-green-700">{approved}</span>
+                  <span className="mt-1 text-sm font-medium text-green-800 flex items-center gap-1"><CheckCircleIcon className="w-5 h-5 text-green-400" /> Approved</span>
+                </div>
+                <div className="flex flex-col items-center justify-center bg-red-50 border-l-4 border-red-500 rounded-lg shadow p-4">
+                  <span className="text-3xl font-bold text-red-700">{rejected}</span>
+                  <span className="mt-1 text-sm font-medium text-red-800 flex items-center gap-1"><XCircleIcon className="w-5 h-5 text-red-400" /> Rejected</span>
+                </div>
+                <div className="flex flex-col items-center justify-center bg-yellow-50 border-l-4 border-yellow-500 rounded-lg shadow p-4">
+                  <span className="text-3xl font-bold text-yellow-700">{pending}</span>
+                  <span className="mt-1 text-sm font-medium text-yellow-800 flex items-center gap-1"><ClockIcon className="w-5 h-5 text-yellow-400" /> Pending</span>
+                </div>
+              </>
+            );
+          })()}
         </div>
         {/* Export Button */}
         <div className="flex justify-end mb-4">
