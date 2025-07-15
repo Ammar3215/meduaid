@@ -17,6 +17,9 @@ const questionSchema = z.object({
   images: z.any(),
   difficulty: z.enum(['easy', 'normal', 'hard'], { errorMap: () => ({ message: 'Please select a difficulty.' }) }),
   correctChoice: z.number().min(0, 'Please select which choice is correct.').max(4, 'Please select which choice is correct.'),
+  guidelinesConfirmed: z.boolean().refine((val) => val, {
+    message: 'You must confirm you have read and followed the guidelines.',
+  }),
 });
 
 type QuestionFormInputs = z.infer<typeof questionSchema>;
@@ -43,6 +46,7 @@ const QuestionSubmission: React.FC = () => {
       explanations: ['', '', '', '', ''],
       difficulty: 'normal',
       correctChoice: 0,
+      guidelinesConfirmed: false,
     },
   });
 
@@ -184,11 +188,23 @@ const QuestionSubmission: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-8 mt-8">
       <h2 className="text-2xl font-bold mb-6 text-primary text-center">Submit a Question</h2>
+      {/* Guidelines Box */}
+      <div className="mb-8 p-4 rounded-lg border-l-4 border-blue-500 bg-blue-50 text-blue-900 shadow-sm">
+        <div className="font-semibold mb-2 text-blue-800 text-base">Please follow these guidelines when submitting a question:</div>
+        <ul className="list-decimal list-inside space-y-1 text-sm sm:text-base">
+          <li>No abbreviations like <span className="italic">don't</span>, <span className="italic">won't</span> or medical abbreviations.</li>
+          <li>Presenting complaint as well as brief history is mentioned.</li>
+          <li>Explain why the answer is wrong.</li>
+          <li>Explain briefly when would the incorrect answer be correct.</li>
+          <li>Add normal ranges for any labs / investigations with values .</li>
+        </ul>
+      </div>
       <form onSubmit={handleSubmit(onSubmitAndAddAnother)} className="space-y-4">
         {/* Category Dropdown */}
         <div>
           <label className="block mb-1 font-medium">Category</label>
           <select {...register('category')} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900">
+            <option value="">Select Category</option>
             {categories.map((cat) => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
@@ -291,6 +307,21 @@ const QuestionSubmission: React.FC = () => {
           </select>
           {errors.difficulty && <p className="text-red-500 text-sm mt-1">{errors.difficulty.message}</p>}
         </div>
+        {/* Guidelines Confirmation Checkbox */}
+        <div className="mb-6 flex items-start">
+          <input
+            type="checkbox"
+            id="guidelinesConfirmed"
+            {...register('guidelinesConfirmed', { required: 'You must confirm you have read and followed the guidelines.' })}
+            className="mt-1 mr-2 w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary"
+          />
+          <label htmlFor="guidelinesConfirmed" className="text-gray-800 text-sm font-medium select-none">
+            I have read and followed all the question submission guidelines.
+          </label>
+        </div>
+        {errors.guidelinesConfirmed && (
+          <p className="text-red-500 text-xs mb-4">{errors.guidelinesConfirmed.message}</p>
+        )}
         <div className="flex flex-col md:flex-row justify-end gap-2 md:gap-4 mt-8">
           <button
             type="button"
