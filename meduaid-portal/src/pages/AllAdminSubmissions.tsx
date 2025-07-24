@@ -74,7 +74,6 @@ const AllAdminSubmissions: React.FC = () => {
   );
 
   const allOsceIds = filteredOSCE.map(s => s._id);
-  const allSelected = selectedOsceIds.length === allOsceIds.length && allOsceIds.length > 0;
   const handleBulkAction = async (status: 'approved' | 'rejected') => {
     setBulkActionLoading(true);
     try {
