@@ -42,7 +42,6 @@ const AllAdminSubmissions: React.FC = () => {
   const [writer, setWriter] = useState('All');
   const [date, setDate] = useState('');
   const [questions, setQuestions] = useState<any[]>([]); // SBA
-  const [osceStations, setOsceStations] = useState<any[]>([]); // OSCE
   const [writers, setWriters] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -65,15 +64,7 @@ const AllAdminSubmissions: React.FC = () => {
     (writer === 'All' || q.writer?.name === writer) &&
     (!date || q.createdAt.startsWith(date))
   );
-  const filteredOSCE = osceStations.filter(q =>
-    (category === 'All' || q.category === category) &&
-    (subject === 'All' || q.subject === subject) &&
-    (topic === 'All' || q.topic === topic) &&
-    (writer === 'All' || q.writer?.name === writer) &&
-    (!date || q.createdAt.startsWith(date))
-  );
 
-  const allOsceIds = filteredOSCE.map(s => s._id);
   const handleBulkAction = async (status: 'approved' | 'rejected') => {
     setBulkActionLoading(true);
     try {
@@ -87,7 +78,7 @@ const AllAdminSubmissions: React.FC = () => {
           body: JSON.stringify({ status }),
         });
       }));
-      setOsceStations(prev => prev.map(s => selectedOsceIds.includes(s._id) ? { ...s, status } : s));
+      // setOsceStations(prev => prev.map(s => selectedOsceIds.includes(s._id) ? { ...s, status } : s)); // This line was removed
       setSelectedOsceIds([]);
     } catch (err) {
       alert('Bulk action failed.');
@@ -107,7 +98,7 @@ const AllAdminSubmissions: React.FC = () => {
           });
           if (!res.ok) throw new Error('Failed to fetch OSCE stations');
           const data = await res.json();
-          setOsceStations(data);
+          // setOsceStations(data); // This line was removed
           // Extract unique writers
           const uniqueWriters: string[] = Array.from(new Set(data.map((q: any) => q.writer?.name).filter((n: any): n is string => Boolean(n))));
           setWriters(uniqueWriters);
@@ -119,7 +110,7 @@ const AllAdminSubmissions: React.FC = () => {
           const data = await res.json();
           // Split into SBA and OSCE for filtering, but keep all for display
           setQuestions(data.submissions.filter((q: any) => q.type === 'SBA'));
-          setOsceStations(data.submissions.filter((q: any) => q.type === 'OSCE'));
+          // setOsceStations(data.submissions.filter((q: any) => q.type === 'OSCE')); // This line was removed
           setAllQuestions(data.submissions);
           // Extract unique writers
           const uniqueWriters: string[] = Array.from(new Set(data.submissions.map((q: any) => q.writer?.name).filter((n: any): n is string => Boolean(n))));
