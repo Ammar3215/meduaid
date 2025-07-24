@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateProfile = exports.changePassword = exports.changeEmail = exports.verifyEmail = exports.login = exports.register = void 0;
+exports.resetPassword = exports.forgotPassword = exports.updateProfile = exports.changePassword = exports.changeEmail = exports.verifyEmail = exports.login = exports.register = void 0;
 const User_1 = __importDefault(require("../models/User"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -222,3 +222,61 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.updateProfile = updateProfile;
+// Forgot Password
+const forgotPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            res.status(400).json({ message: 'Email is required.' });
+            return;
+        }
+        const user = yield User_1.default.findOne({ email });
+        if (!user) {
+            // For security, do not reveal if user exists
+            res.status(200).json({ message: 'If that email is registered, a reset link has been sent.' });
+            return;
+        }
+        const token = crypto_1.default.randomBytes(32).toString('hex');
+        user.passwordResetToken = token;
+        user.passwordResetExpires = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
+        yield user.save();
+        yield (0, email_1.sendPasswordResetEmail)(email, token);
+        res.status(200).json({ message: 'If that email is registered, a reset link has been sent.' });
+        return;
+    }
+    catch (err) {
+        res.status(500).json({ message: 'Server error' });
+        return;
+    }
+});
+exports.forgotPassword = forgotPassword;
+// Reset Password
+const resetPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { token, newPassword } = req.body;
+        if (!token || !newPassword) {
+            res.status(400).json({ message: 'Token and new password are required.' });
+            return;
+        }
+        const user = yield User_1.default.findOne({ passwordResetToken: token, passwordResetExpires: { $gt: new Date() } });
+        if (!user) {
+            res.status(400).json({ message: 'Invalid or expired token.' });
+            return;
+        }
+        if (newPassword.length < 6) {
+            res.status(400).json({ message: 'Password must be at least 6 characters.' });
+            return;
+        }
+        user.password = yield bcryptjs_1.default.hash(newPassword, 10);
+        user.passwordResetToken = undefined;
+        user.passwordResetExpires = undefined;
+        yield user.save();
+        res.json({ message: 'Password reset successful.' });
+        return;
+    }
+    catch (err) {
+        res.status(500).json({ message: 'Server error' });
+        return;
+    }
+});
+exports.resetPassword = resetPassword;

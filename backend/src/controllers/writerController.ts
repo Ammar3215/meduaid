@@ -2,6 +2,7 @@ import { Request, Response, RequestHandler } from 'express';
 import Submission from '../models/Submission';
 import Penalty from '../models/Penalty';
 import mongoose from 'mongoose';
+import OsceStation from '../models/OsceStation';
 
 export const getStats: RequestHandler = async (req, res) => {
   try {
@@ -11,27 +12,26 @@ export const getStats: RequestHandler = async (req, res) => {
       return;
     }
     const writerId = user.id;
-    const totalSubmissions = await Submission.countDocuments({ writer: writerId });
-    const submissionsByStatus = await Submission.aggregate([
-      { $match: { writer: new mongoose.Types.ObjectId(writerId) } },
-      { $group: { _id: '$status', count: { $sum: 1 } } }
-    ]);
-    const recentSubmissionsDocs = await Submission.find({ writer: writerId }).sort({ createdAt: -1 });
-    const recentSubmissions = recentSubmissionsDocs.map(sub => ({
-      _id: sub._id,
-      category: sub.category,
-      subject: sub.subject,
-      topic: sub.topic,
-      question: sub.question,
-      choices: sub.choices,
-      explanations: sub.explanations,
-      reference: sub.reference,
-      images: sub.images,
-      status: sub.status,
-      rejectionReason: sub.rejectionReason,
-      createdAt: sub.createdAt,
-      updatedAt: sub.updatedAt,
+    // SBA
+    const sbaDocs = await Submission.find({ writer: writerId });
+    const sba = sbaDocs.map(sub => ({
+      ...sub.toObject(),
+      type: 'SBA',
     }));
+    // OSCE
+    const osceDocs = await OsceStation.find({ writer: writerId });
+    const osce = osceDocs.map(station => ({
+      ...station.toObject(),
+      type: 'OSCE',
+    }));
+    // Merge and sort
+    const recentSubmissions = [...sba, ...osce].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    // Stats
+    const totalSubmissions = recentSubmissions.length;
+    const submissionsByStatus = recentSubmissions.reduce((acc: Record<string, number>, q) => {
+      acc[q.status] = (acc[q.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
     res.json({
       totalSubmissions,
       submissionsByStatus,

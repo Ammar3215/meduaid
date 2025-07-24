@@ -13,6 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendVerificationEmail = sendVerificationEmail;
+exports.sendPasswordResetEmail = sendPasswordResetEmail;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 console.log('Loaded Gmail credentials:', process.env.GMAIL_USER, process.env.GMAIL_PASS ? '✅' : '❌');
 const transporter = nodemailer_1.default.createTransport({
@@ -37,6 +38,20 @@ function sendVerificationEmail(to, token) {
             html: `<p>Please verify your email by clicking <a href="${verificationUrl}">here</a>.<br/><br/>Or copy and paste this link in your browser:<br/>${verificationUrl}</p>`
         }).catch((err) => {
             console.error('Email send failed:', err);
+        });
+        return info;
+    });
+}
+function sendPasswordResetEmail(to, token) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const resetUrl = `${frontendBaseUrl}/reset-password?token=${token}`;
+        const info = yield transporter.sendMail({
+            from: 'no-reply@meduaid.com',
+            to,
+            subject: 'Reset your password',
+            html: `<p>You requested a password reset. Click <a href="${resetUrl}">here</a> to reset your password.<br/><br/>Or copy and paste this link in your browser:<br/>${resetUrl}</p>`
+        }).catch((err) => {
+            console.error('Password reset email send failed:', err);
         });
         return info;
     });

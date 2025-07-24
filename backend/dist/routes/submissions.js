@@ -32,6 +32,7 @@ const upload = (0, multer_1.default)({ storage });
 router.post('/', auth_1.authenticate, submissionController_1.createSubmission);
 router.get('/', auth_1.authenticate, submissionController_1.getSubmissions);
 router.patch('/:id', auth_1.authenticate, submissionController_1.updateSubmissionStatus);
+router.delete('/:id', auth_1.authenticate, submissionController_1.deleteSubmission);
 // GET /api/submissions/:id - fetch a single submission by ID
 router.get('/:id', auth_1.authenticate, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {

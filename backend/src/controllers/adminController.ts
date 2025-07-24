@@ -2,6 +2,7 @@ import { Request, Response, RequestHandler } from 'express';
 import User from '../models/User';
 import Submission from '../models/Submission';
 import Penalty from '../models/Penalty';
+import OsceStation from '../models/OsceStation';
 import mongoose from 'mongoose';
 
 export const getStats: RequestHandler = async (req, res) => {
@@ -12,12 +13,21 @@ export const getStats: RequestHandler = async (req, res) => {
       return;
     }
     const totalUsers = await User.countDocuments();
-    const totalSubmissions = await Submission.countDocuments();
-    const submissionsByStatus = await Submission.aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 } } }
-    ]);
-    const allSubmissions = await Submission.find().sort({ createdAt: -1 }).populate('writer', 'name email');
-    const recentSubmissions = allSubmissions.slice(0, 5);
+    // Fetch both types
+    const sba = await Submission.find().populate('writer', 'name email');
+    const osce = await OsceStation.find().populate('writer', 'name email');
+    // Tag and merge
+    const sbaWithType = sba.map((q) => ({ ...q.toObject(), type: 'SBA' }));
+    const osceWithType = osce.map((q) => ({ ...q.toObject(), type: 'OSCE' }));
+    const all = [...sbaWithType, ...osceWithType].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    // Stats by status (merged)
+    const submissionsByStatus = all.reduce((acc: Record<string, number>, q) => {
+      acc[q.status] = (acc[q.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    const totalSubmissions = all.length;
+    const allSubmissions = all;
+    const recentSubmissions = all.slice(0, 5);
     res.json({
       totalUsers,
       totalSubmissions,
@@ -114,6 +124,28 @@ export const deletePenalty: RequestHandler = async (req, res) => {
       return;
     }
     res.status(200).json({ message: 'Penalty removed' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// New endpoint: Get all submissions (SBA + OSCE)
+export const getAllSubmissions: RequestHandler = async (req, res) => {
+  try {
+    const user = (req as any).user;
+    if (!user || user.role !== 'admin') {
+      res.status(403).json({ message: 'Forbidden' });
+      return;
+    }
+    // Fetch both types
+    const sba = await Submission.find().populate('writer', 'name email');
+    const osce = await OsceStation.find().populate('writer', 'name email');
+    // Normalize and tag type
+    const sbaWithType = sba.map((q) => ({ ...q.toObject(), type: 'SBA' }));
+    const osceWithType = osce.map((q) => ({ ...q.toObject(), type: 'OSCE' }));
+    // Merge and sort by createdAt desc
+    const all = [...sbaWithType, ...osceWithType].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    res.json({ submissions: all });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
