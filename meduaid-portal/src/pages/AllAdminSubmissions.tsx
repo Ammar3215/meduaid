@@ -53,8 +53,6 @@ const AllAdminSubmissions: React.FC = () => {
   const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
   const [successMessage, setSuccessMessage] = useState('');
   const [allQuestions, setAllQuestions] = useState<any[]>([]); // for stats
-  const [osceFeedback, setOsceFeedback] = useState('');
-  const [osceActionLoading, setOsceActionLoading] = useState(false);
   // Add state for bulk selection
   const [selectedOsceIds, setSelectedOsceIds] = useState<string[]>([]);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
@@ -77,14 +75,6 @@ const AllAdminSubmissions: React.FC = () => {
 
   const allOsceIds = filteredOSCE.map(s => s._id);
   const allSelected = selectedOsceIds.length === allOsceIds.length && allOsceIds.length > 0;
-  const toggleSelectAll = () => {
-    setSelectedOsceIds(allSelected ? [] : allOsceIds);
-  };
-  const toggleSelectOne = (id: string) => {
-    setSelectedOsceIds(selectedOsceIds.includes(id)
-      ? selectedOsceIds.filter(i => i !== id)
-      : [...selectedOsceIds, id]);
-  };
   const handleBulkAction = async (status: 'approved' | 'rejected') => {
     setBulkActionLoading(true);
     try {
@@ -664,9 +654,6 @@ function AdminEditQuestionForm({ submission, onClose, onSave, jwt }: { submissio
   const handleChange = (field: string, value: any) => {
     setForm((f: any) => ({ ...f, [field]: value }));
   };
-  const handleArrayChange = (field: string, idx: number, value: string) => {
-    setForm((f: any) => ({ ...f, [field]: f[field].map((v: string, i: number) => i === idx ? value : v) }));
-  };
   const handleCategoryChange = (value: string) => {
     setEditCategory(value);
     setEditSubject('');
@@ -798,7 +785,7 @@ function AdminEditQuestionForm({ submission, onClose, onSave, jwt }: { submissio
           <input
             key={i}
             value={form.choices[i] || ''}
-            onChange={e => handleArrayChange('choices', i, e.target.value)}
+            onChange={e => handleChange('choices', form.choices.map((v: string, idx: number) => idx === i ? e.target.value : v))}
             className="w-full px-4 py-2 border rounded-lg mb-2 bg-white text-gray-900"
             placeholder={`Choice ${String.fromCharCode(65 + i)}`}
           />
@@ -810,7 +797,7 @@ function AdminEditQuestionForm({ submission, onClose, onSave, jwt }: { submissio
           <input
             key={i}
             value={form.explanations[i] || ''}
-            onChange={e => handleArrayChange('explanations', i, e.target.value)}
+            onChange={e => handleChange('explanations', form.explanations.map((v: string, idx: number) => idx === i ? e.target.value : v))}
             className="w-full px-4 py-2 border rounded-lg mb-2 bg-white text-gray-900"
             placeholder={`Explain Choice ${String.fromCharCode(65 + i)}`}
           />
@@ -847,60 +834,6 @@ function AdminEditQuestionForm({ submission, onClose, onSave, jwt }: { submissio
         <button type="button" className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-semibold" onClick={onClose} disabled={saving}>Cancel</button>
         <button type="submit" className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-dark transition" disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
       </div>
-    </form>
-  );
-}
-
-function OsceEditForm({ station, onClose, onSave, jwt }: { station: any, onClose: () => void, onSave: (updated: any) => void, jwt: string }) {
-  const [form, setForm] = React.useState<any>({ ...station });
-  const [saving, setSaving] = React.useState(false);
-  const [error, setError] = React.useState('');
-  const handleChange = (field: string, value: any) => {
-    setForm((f: any) => ({ ...f, [field]: value }));
-  };
-  const handleArrayChange = (field: string, idx: number, value: string) => {
-    setForm((f: any) => ({ ...f, [field]: f[field].map((v: string, i: number) => i === idx ? value : v) }));
-  };
-  const handleSave = async () => {
-    setSaving(true);
-    setError('');
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/osce-stations/${form._id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${jwt}`,
-        },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) {
-        setError('Failed to save changes');
-        setSaving(false);
-        return;
-      }
-      const updated = await res.json();
-      onSave(updated);
-    } catch {
-      setError('Network error');
-    }
-    setSaving(false);
-  };
-  return (
-    <form className="space-y-4" onSubmit={e => { e.preventDefault(); handleSave(); }}>
-      <div>
-        <label className="block mb-1 font-medium">Title</label>
-        <input value={form.title} onChange={e => handleChange('title', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900" />
-      </div>
-      <div>
-        <label className="block mb-1 font-medium">Case Description</label>
-        <textarea value={form.caseDescription} onChange={e => handleChange('caseDescription', e.target.value)} className="w-full px-4 py-2 border rounded-lg min-h-[80px] bg-white text-gray-900" />
-      </div>
-      {/* Add more fields as needed (historySections, markingScheme, followUps, etc.) */}
-      <div className="flex justify-end gap-2 mt-6">
-        <button type="button" className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-semibold" onClick={onClose} disabled={saving}>Cancel</button>
-        <button type="submit" className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-dark transition" disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
-      </div>
-      {error && <div className="text-red-500 text-center">{error}</div>}
     </form>
   );
 }

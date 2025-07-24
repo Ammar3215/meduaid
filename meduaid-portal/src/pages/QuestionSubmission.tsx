@@ -76,7 +76,6 @@ const QuestionSubmission: React.FC = () => {
   const [osceType, setOsceType] = useState<'history' | 'examination'>('history');
   const [osceTitle, setOsceTitle] = useState('');
   const [osceCase, setOsceCase] = useState('');
-  const [osceHistory, setOsceHistory] = useState('');
   const [osceCategory, setOsceCategory] = useState(categories[0] || '');
   const [osceSubject, setOsceSubject] = useState('');
   const [osceTopic, setOsceTopic] = useState('');
@@ -363,7 +362,6 @@ const QuestionSubmission: React.FC = () => {
       // Reset form
       setOsceTitle('');
       setOsceCase('');
-      setOsceHistory('');
       setOsceCategory(categories[0] || '');
       setOsceSubject('');
       setOsceTopic('');

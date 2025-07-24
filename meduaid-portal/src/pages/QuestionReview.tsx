@@ -244,9 +244,6 @@ const QuestionReview: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {filteredQuestions.map((q) => {
-                const truncated = q.type === 'OSCE'
-                  ? (q.title && q.title.length > 120)
-                  : (q.question && q.question.length > 120);
                 return (
                   <div key={q._id} className="bg-white/90 rounded-2xl shadow-xl border border-gray-100 p-6 flex flex-col gap-2 transition-all duration-200 hover:shadow-2xl min-h-[180px] max-h-[240px] justify-between">
                     <div className="flex items-center gap-3 mb-2">
