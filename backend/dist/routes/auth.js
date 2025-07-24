@@ -7,6 +7,8 @@ const router = (0, express_1.Router)();
 router.post('/register', authController_1.register);
 router.post('/login', authController_1.login);
 router.post('/verify-email', authController_1.verifyEmail);
+router.post('/forgot-password', authController_1.forgotPassword);
+router.post('/reset-password', authController_1.resetPassword);
 router.patch('/change-email', auth_1.authenticate, authController_1.changeEmail);
 router.patch('/change-password', auth_1.authenticate, authController_1.changePassword);
 router.patch('/update-profile', auth_1.authenticate, authController_1.updateProfile);

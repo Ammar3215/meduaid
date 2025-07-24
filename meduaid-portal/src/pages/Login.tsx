@@ -68,6 +68,9 @@ const Login: React.FC = () => {
                 autoComplete="current-password"
               />
               {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>}
+              <div className="text-right mt-1">
+                <a href="/forgot-password" className="text-sm text-primary hover:underline">Forgot Password?</a>
+              </div>
             </div>
             {authError && <p className="text-red-600 text-center">{authError}</p>}
             <button

@@ -41,5 +41,7 @@ const UserSchema = new mongoose_1.Schema({
     role: { type: String, enum: ['writer', 'admin'], default: 'writer' },
     verified: { type: Boolean, default: false },
     emailVerificationToken: { type: String },
+    passwordResetToken: { type: String },
+    passwordResetExpires: { type: Date },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('User', UserSchema);

@@ -14,6 +14,8 @@ import AllSubmissions from './pages/AllSubmissions'
 import Settings from './pages/Settings'
 import AllAdminSubmissions from './pages/AllAdminSubmissions'
 import AdminQuestionSubmission from './pages/AdminQuestionSubmission'
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import { useAuth } from './context/AuthContext'
 
 function App() {
@@ -29,6 +31,8 @@ function App() {
           <Route path="login" element={<Login />} />
           <Route path="signup" element={<Signup />} />
           <Route path="verify-email" element={<VerifyEmail />} />
+          <Route path="forgot-password" element={<ForgotPassword />} />
+          <Route path="reset-password" element={<ResetPassword />} />
           {/* Protected Writer Routes */}
           <Route element={<ProtectedRoute />}>
             <Route index element={<Dashboard />} />

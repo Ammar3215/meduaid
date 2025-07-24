@@ -27,4 +27,17 @@ export async function sendVerificationEmail(to: string, token: string) {
     console.error('Email send failed:', err);
   });
   return info;
+}
+
+export async function sendPasswordResetEmail(to: string, token: string) {
+  const resetUrl = `${frontendBaseUrl}/reset-password?token=${token}`;
+  const info = await transporter.sendMail({
+    from: 'no-reply@meduaid.com',
+    to,
+    subject: 'Reset your password',
+    html: `<p>You requested a password reset. Click <a href="${resetUrl}">here</a> to reset your password.<br/><br/>Or copy and paste this link in your browser:<br/>${resetUrl}</p>`
+  }).catch((err) => {
+    console.error('Password reset email send failed:', err);
+  });
+  return info;
 } 

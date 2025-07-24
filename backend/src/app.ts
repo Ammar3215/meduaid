@@ -4,6 +4,7 @@ import authRoutes from './routes/auth';
 import submissionsRoutes from './routes/submissions';
 import adminRoutes from './routes/admin';
 import writerRoutes from './routes/writer';
+import osceStationsRoutes from './routes/osceStations';
 import path from 'path';
 
 const app = express();
@@ -33,5 +34,6 @@ app.use('/api/auth', authRoutes);
 app.use('/api/submissions', submissionsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/writer', writerRoutes);
+app.use('/api/osce-stations', osceStationsRoutes);
 
 export default app;

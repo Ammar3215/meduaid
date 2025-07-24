@@ -9,4 +9,5 @@ router.get('/penalties', auth_1.authenticate, adminController_1.getRecentPenalti
 router.post('/penalties', auth_1.authenticate, adminController_1.createPenalty);
 router.delete('/penalties/:id', auth_1.authenticate, adminController_1.deletePenalty);
 router.get('/writers', auth_1.authenticate, adminController_1.getWriters);
+router.get('/all-submissions', auth_1.authenticate, adminController_1.getAllSubmissions);
 exports.default = router;

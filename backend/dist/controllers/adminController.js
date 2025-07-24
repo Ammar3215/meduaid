@@ -12,10 +12,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deletePenalty = exports.getWriters = exports.createPenalty = exports.getRecentPenalties = exports.getStats = void 0;
+exports.getAllSubmissions = exports.deletePenalty = exports.getWriters = exports.createPenalty = exports.getRecentPenalties = exports.getStats = void 0;
 const User_1 = __importDefault(require("../models/User"));
 const Submission_1 = __importDefault(require("../models/Submission"));
 const Penalty_1 = __importDefault(require("../models/Penalty"));
+const OsceStation_1 = __importDefault(require("../models/OsceStation"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const getStats = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -25,12 +26,21 @@ const getStats = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             return;
         }
         const totalUsers = yield User_1.default.countDocuments();
-        const totalSubmissions = yield Submission_1.default.countDocuments();
-        const submissionsByStatus = yield Submission_1.default.aggregate([
-            { $group: { _id: '$status', count: { $sum: 1 } } }
-        ]);
-        const allSubmissions = yield Submission_1.default.find().sort({ createdAt: -1 }).populate('writer', 'name email');
-        const recentSubmissions = allSubmissions.slice(0, 5);
+        // Fetch both types
+        const sba = yield Submission_1.default.find().populate('writer', 'name email');
+        const osce = yield OsceStation_1.default.find().populate('writer', 'name email');
+        // Tag and merge
+        const sbaWithType = sba.map((q) => (Object.assign(Object.assign({}, q.toObject()), { type: 'SBA' })));
+        const osceWithType = osce.map((q) => (Object.assign(Object.assign({}, q.toObject()), { type: 'OSCE' })));
+        const all = [...sbaWithType, ...osceWithType].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        // Stats by status (merged)
+        const submissionsByStatus = all.reduce((acc, q) => {
+            acc[q.status] = (acc[q.status] || 0) + 1;
+            return acc;
+        }, {});
+        const totalSubmissions = all.length;
+        const allSubmissions = all;
+        const recentSubmissions = all.slice(0, 5);
         res.json({
             totalUsers,
             totalSubmissions,
@@ -137,3 +147,26 @@ const deletePenalty = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.deletePenalty = deletePenalty;
+// New endpoint: Get all submissions (SBA + OSCE)
+const getAllSubmissions = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const user = req.user;
+        if (!user || user.role !== 'admin') {
+            res.status(403).json({ message: 'Forbidden' });
+            return;
+        }
+        // Fetch both types
+        const sba = yield Submission_1.default.find().populate('writer', 'name email');
+        const osce = yield OsceStation_1.default.find().populate('writer', 'name email');
+        // Normalize and tag type
+        const sbaWithType = sba.map((q) => (Object.assign(Object.assign({}, q.toObject()), { type: 'SBA' })));
+        const osceWithType = osce.map((q) => (Object.assign(Object.assign({}, q.toObject()), { type: 'OSCE' })));
+        // Merge and sort by createdAt desc
+        const all = [...sbaWithType, ...osceWithType].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        res.json({ submissions: all });
+    }
+    catch (err) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+exports.getAllSubmissions = getAllSubmissions;

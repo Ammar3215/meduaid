@@ -4,6 +4,7 @@ import { subjectsStructure } from '../utils/subjectsStructure';
 import QuestionViewModal from '../components/QuestionViewModal';
 import Skeleton from '../components/Skeleton';
 import { AdminEditQuestionForm } from './AllAdminSubmissions';
+import OsceStationViewModal from '../components/OsceStationViewModal';
 
 const COLORS = [
   '#4B47B6', // deep purple
@@ -162,22 +163,29 @@ const AdminDashboard: React.FC = () => {
   }
 
   // Handle View button click
-  const handleViewClick = async (id: string) => {
+  const handleViewClick = async (id: string, type?: string) => {
     setModalLoading(true);
     setModalError('');
     setSelectedSubmission(null);
     setModalOpen(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
-        headers: { Authorization: `Bearer ${jwt}` },
-      });
+      let res;
+      if (type === 'OSCE') {
+        res = await fetch(`${API_BASE_URL}/api/osce-stations/${id}`, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+      } else {
+        res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+      }
       if (!res.ok) {
         setModalError('Failed to fetch submission.');
         setModalLoading(false);
         return;
       }
       const data = await res.json();
-      setSelectedSubmission(data);
+      setSelectedSubmission({ ...data, type });
     } catch (err) {
       setModalError('Network error.');
     }
@@ -414,7 +422,7 @@ const AdminDashboard: React.FC = () => {
                   <tr key={q._id} className="border-t hover:bg-gray-50 transition">
                     <td className="px-4 py-2 w-[160px] whitespace-nowrap">{new Date(q.createdAt).toLocaleString()}</td>
                     <td className="px-4 py-2 w-[160px] whitespace-nowrap">{q.writer?.name || '-'}</td>
-                    <td className="px-4 py-2 w-[300px] max-w-[300px] truncate overflow-hidden whitespace-nowrap" title={q.question}>{q.question}</td>
+                    <td className="px-4 py-2 w-[300px] max-w-[300px] truncate overflow-hidden whitespace-nowrap" title={q.type === 'OSCE' ? q.title : q.question}>{q.type === 'OSCE' ? q.title : q.question}</td>
                     <td className="px-4 py-2 w-[160px] whitespace-nowrap">{q.subject}</td>
                     <td className="px-4 py-2 w-[160px] whitespace-nowrap">{q.topic}</td>
                     <td className="px-4 py-2 w-[100px]">
@@ -430,7 +438,7 @@ const AdminDashboard: React.FC = () => {
                     <td className="px-4 py-2 w-[100px]">
                       <button
                         className="bg-primary text-white rounded px-3 py-1 hover:bg-primary-dark transition font-semibold"
-                        onClick={() => handleViewClick(q._id)}
+                        onClick={() => handleViewClick(q._id, q.type)}
                       >
                         View
                       </button>
@@ -443,81 +451,91 @@ const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Modal for viewing submission */}
-        {modalOpen && (
-          <QuestionViewModal
-            open={modalOpen}
-            onClose={() => { setModalOpen(false); setIsEditing(false); setEditData(null); }}
-            question={selectedSubmission}
-            loading={modalLoading}
-            error={modalError}
-          >
-            {!isEditing && selectedSubmission && (
-              <div className="flex flex-col gap-2">
-                <label className="font-semibold">Update Status:</label>
-                <select
-                  className="border rounded px-2 py-1 text-gray-900"
-                  value={selectedSubmission.status}
-                  disabled={editLoading}
-                  onChange={async e => {
-                    const newStatus = e.target.value;
-                    setEditLoading(true);
-                    try {
-                      const res = await fetch(`${API_BASE_URL}/api/submissions/${selectedSubmission._id}`, {
-                        method: 'PATCH',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          Authorization: `Bearer ${jwt}`,
-                        },
-                        body: JSON.stringify({ status: newStatus }),
-                      });
-                      if (res.ok) {
-                        const updated = await res.json();
-                        setSelectedSubmission(updated);
-                        setStats((prev: any) => {
-                          if (!prev) return prev;
-                          const updatedSubmissions = prev.allSubmissions.map((q: any) =>
-                            q._id === updated._id ? { ...q, ...updated } : q
-                          );
-                          return { ...prev, allSubmissions: updatedSubmissions };
+        {modalOpen && selectedSubmission && (
+          selectedSubmission.type === 'OSCE' ? (
+            <OsceStationViewModal
+              open={modalOpen}
+              onClose={() => { setModalOpen(false); setIsEditing(false); setEditData(null); }}
+              station={selectedSubmission}
+              loading={modalLoading}
+              error={modalError}
+            />
+          ) : (
+            <QuestionViewModal
+              open={modalOpen}
+              onClose={() => { setModalOpen(false); setIsEditing(false); setEditData(null); }}
+              question={selectedSubmission}
+              loading={modalLoading}
+              error={modalError}
+            >
+              {!isEditing && selectedSubmission && (
+                <div className="flex flex-col gap-2">
+                  <label className="font-semibold">Update Status:</label>
+                  <select
+                    className="border rounded px-2 py-1 text-gray-900"
+                    value={selectedSubmission.status}
+                    disabled={editLoading}
+                    onChange={async e => {
+                      const newStatus = e.target.value;
+                      setEditLoading(true);
+                      try {
+                        const res = await fetch(`${API_BASE_URL}/api/submissions/${selectedSubmission._id}`, {
+                          method: 'PATCH',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${jwt}`,
+                          },
+                          body: JSON.stringify({ status: newStatus }),
                         });
+                        if (res.ok) {
+                          const updated = await res.json();
+                          setSelectedSubmission(updated);
+                          setStats((prev: any) => {
+                            if (!prev) return prev;
+                            const updatedSubmissions = prev.allSubmissions.map((q: any) =>
+                              q._id === updated._id ? { ...q, ...updated } : q
+                            );
+                            return { ...prev, allSubmissions: updatedSubmissions };
+                          });
+                        }
+                      } finally {
+                        setEditLoading(false);
                       }
-                    } finally {
-                      setEditLoading(false);
-                    }
+                    }}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                  <button
+                    className="px-4 py-2 rounded bg-primary text-white font-semibold hover:bg-primary-dark transition mt-2"
+                    onClick={handleEditClick}
+                  >
+                    Edit
+                  </button>
+                </div>
+              )}
+              {isEditing && selectedSubmission && (
+                <AdminEditQuestionForm
+                  submission={selectedSubmission}
+                  onClose={() => { setIsEditing(false); setEditData(null); }}
+                  onSave={updated => {
+                    setStats((prev: any) => {
+                      if (!prev) return prev;
+                      const updatedSubmissions = prev.allSubmissions.map((q: any) =>
+                        q._id === updated._id ? { ...q, ...updated } : q
+                      );
+                      return { ...prev, allSubmissions: updatedSubmissions };
+                    });
+                    setSelectedSubmission(updated);
+                    setIsEditing(false);
+                    setEditData(null);
                   }}
-                >
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-                <button
-                  className="px-4 py-2 rounded bg-primary text-white font-semibold hover:bg-primary-dark transition mt-2"
-                  onClick={handleEditClick}
-                >
-                  Edit
-                </button>
-              </div>
-            )}
-            {isEditing && selectedSubmission && (
-              <AdminEditQuestionForm
-                submission={selectedSubmission}
-                onClose={() => { setIsEditing(false); setEditData(null); }}
-                onSave={updated => {
-                  setStats((prev: any) => {
-                    if (!prev) return prev;
-                    const updatedSubmissions = prev.allSubmissions.map((q: any) =>
-                      q._id === updated._id ? { ...q, ...updated } : q
-                    );
-                    return { ...prev, allSubmissions: updatedSubmissions };
-                  });
-                  setSelectedSubmission(updated);
-                  setIsEditing(false);
-                  setEditData(null);
-                }}
-                jwt={jwt || ''}
-              />
-            )}
-          </QuestionViewModal>
+                  jwt={jwt || ''}
+                />
+              )}
+            </QuestionViewModal>
+          )
         )}
       </div>
 

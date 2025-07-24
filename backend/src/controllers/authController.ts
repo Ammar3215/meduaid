@@ -3,7 +3,7 @@ import User, { IUser } from '../models/User';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { sendVerificationEmail } from '../utils/email';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email';
 
 export const register: RequestHandler = async (req, res) => {
   console.log('Signup route hit');
@@ -204,5 +204,61 @@ export const updateProfile: RequestHandler = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
+  }
+}; 
+
+// Forgot Password
+export const forgotPassword: RequestHandler = async (req, res): Promise<void> => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      res.status(400).json({ message: 'Email is required.' });
+      return;
+    }
+    const user = await User.findOne({ email });
+    if (!user) {
+      // For security, do not reveal if user exists
+      res.status(200).json({ message: 'If that email is registered, a reset link has been sent.' });
+      return;
+    }
+    const token = crypto.randomBytes(32).toString('hex');
+    user.passwordResetToken = token;
+    user.passwordResetExpires = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
+    await user.save();
+    await sendPasswordResetEmail(email, token);
+    res.status(200).json({ message: 'If that email is registered, a reset link has been sent.' });
+    return;
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+    return;
+  }
+};
+
+// Reset Password
+export const resetPassword: RequestHandler = async (req, res): Promise<void> => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) {
+      res.status(400).json({ message: 'Token and new password are required.' });
+      return;
+    }
+    const user = await User.findOne({ passwordResetToken: token, passwordResetExpires: { $gt: new Date() } });
+    if (!user) {
+      res.status(400).json({ message: 'Invalid or expired token.' });
+      return;
+    }
+    if (newPassword.length < 6) {
+      res.status(400).json({ message: 'Password must be at least 6 characters.' });
+      return;
+    }
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+    res.json({ message: 'Password reset successful.' });
+    return;
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+    return;
   }
 }; 

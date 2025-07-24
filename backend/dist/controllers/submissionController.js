@@ -23,7 +23,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getSubmissionById = exports.updateSubmissionStatus = exports.getSubmissions = exports.createSubmission = void 0;
+exports.getSubmissionById = exports.deleteSubmission = exports.updateSubmissionStatus = exports.getSubmissions = exports.createSubmission = void 0;
 const Submission_1 = __importDefault(require("../models/Submission"));
 // Writer submits a question
 const createSubmission = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -172,6 +172,35 @@ const updateSubmissionStatus = (req, res) => __awaiter(void 0, void 0, void 0, f
     }
 });
 exports.updateSubmissionStatus = updateSubmissionStatus;
+// Delete a submission (question)
+const deleteSubmission = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const user = req.user;
+        const { id } = req.params;
+        const submission = yield Submission_1.default.findById(id);
+        if (!submission) {
+            res.status(404).json({ message: 'Submission not found' });
+            return;
+        }
+        if ((user === null || user === void 0 ? void 0 : user.role) === 'admin') {
+            yield Submission_1.default.findByIdAndDelete(id);
+            res.json({ message: 'Submission deleted' });
+            return;
+        }
+        if ((user === null || user === void 0 ? void 0 : user.role) === 'writer' &&
+            submission.writer.toString() === user.id &&
+            ['draft', 'rejected', 'pending'].includes(submission.status)) {
+            yield Submission_1.default.findByIdAndDelete(id);
+            res.json({ message: 'Submission deleted' });
+            return;
+        }
+        res.status(403).json({ message: 'Forbidden' });
+    }
+    catch (err) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+exports.deleteSubmission = deleteSubmission;
 // Get a single submission by ID
 const getSubmissionById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {

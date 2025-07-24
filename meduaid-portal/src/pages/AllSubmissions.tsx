@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import Skeleton from '../components/Skeleton';
 import { subjectsStructure } from '../utils/subjectsStructure';
 import { TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
+import OsceStationViewModal from '../components/OsceStationViewModal';
 
 interface Submission {
   _id: string;
@@ -17,6 +18,7 @@ interface Submission {
   subtopic?: string;
   reference: string;
   category: string;
+  type?: string; // Added type for OSCEs
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
@@ -101,19 +103,21 @@ const AllSubmissions: React.FC = () => {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [typeFilter, setTypeFilter] = useState('All');
 
   const subjects = getSubjectsForCategory(categoryFilter);
   const topics = subjectFilter !== 'All' ? getTopicsForSubject(subjectFilter) : [];
 
   // Filtered submissions
   const filteredSubmissions = submissions.filter(sub => {
+    const typeMatch = typeFilter === 'All' || sub.type === typeFilter;
     const statusMatch = statusFilter === 'All' || sub.status === statusFilter;
     const categoryMatch = categoryFilter === 'All' || sub.category === categoryFilter;
     const subjectMatch = subjectFilter === 'All' || sub.subject === subjectFilter;
     const topicMatch = topicFilter === 'All' || sub.topic === topicFilter;
     const dateFromMatch = !dateFrom || new Date(sub.createdAt) >= new Date(dateFrom);
     const dateToMatch = !dateTo || new Date(sub.createdAt) <= new Date(dateTo + 'T23:59:59');
-    return statusMatch && categoryMatch && subjectMatch && topicMatch && dateFromMatch && dateToMatch;
+    return typeMatch && statusMatch && categoryMatch && subjectMatch && topicMatch && dateFromMatch && dateToMatch;
   });
 
   // Calculate summary counts
@@ -123,21 +127,22 @@ const AllSubmissions: React.FC = () => {
     rejected: submissions.filter(s => s.status === 'rejected').length,
   };
 
+  // Update data fetching to get both SBA and OSCE submissions
   useEffect(() => {
     const fetchSubmissions = async () => {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`${API_BASE_URL}/api/submissions`, {
-          headers: {
-            Authorization: `Bearer ${jwt}`,
-          },
+        const sbaRes = await fetch(`${API_BASE_URL}/api/submissions`, {
+          headers: { Authorization: `Bearer ${jwt}` },
         });
-        if (!res.ok) {
-          throw new Error('Failed to fetch submissions');
-        }
-        const data = await res.json();
-        setSubmissions(Array.isArray(data) ? data : data.submissions || []);
+        const osceRes = await fetch(`${API_BASE_URL}/api/osce-stations`, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+        if (!sbaRes.ok || !osceRes.ok) throw new Error('Failed to fetch submissions');
+        const sba = (await sbaRes.json()).map((q: any) => ({ ...q, type: 'SBA' }));
+        const osce = (await osceRes.json()).map((q: any) => ({ ...q, type: 'OSCE' }));
+        setSubmissions([...sba, ...osce].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       } catch (err: any) {
         setError(err.message || 'Network error');
       }
@@ -147,22 +152,29 @@ const AllSubmissions: React.FC = () => {
   }, [jwt]);
 
   // Handle View button click
-  const handleViewClick = async (id: string) => {
+  const handleViewClick = async (id: string, type?: string) => {
     setModalLoading(true);
     setModalError('');
     setSelectedSubmission(null);
     setModalOpen(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
-        headers: { Authorization: `Bearer ${jwt}` },
-      });
+      let res;
+      if (type === 'OSCE') {
+        res = await fetch(`${API_BASE_URL}/api/osce-stations/${id}`, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+      } else {
+        res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+      }
       if (!res.ok) {
         setModalError('Failed to fetch submission.');
         setModalLoading(false);
         return;
       }
       const data = await res.json();
-      setSelectedSubmission(data);
+      setSelectedSubmission({ ...data, type });
     } catch (err) {
       setModalError('Network error.');
     }
@@ -282,6 +294,18 @@ const AllSubmissions: React.FC = () => {
             onChange={e => setDateTo(e.target.value)}
           />
         </div>
+        <div>
+          <label className="block text-xs font-semibold mb-1">Type</label>
+          <select
+            className="px-3 py-2 border rounded-lg bg-white text-gray-900"
+            value={typeFilter}
+            onChange={e => setTypeFilter(e.target.value)}
+          >
+            <option value="All">All</option>
+            <option value="SBA">SBA</option>
+            <option value="OSCE">OSCE</option>
+          </select>
+        </div>
         <div className="flex items-end h-full">
           <button
             type="button"
@@ -314,6 +338,7 @@ const AllSubmissions: React.FC = () => {
                 <th className="py-2 px-4 border">Rejection Reason</th>
                 <th className="py-2 px-4 border">Submitted At</th>
                 <th className="py-2 px-4 border">Last Updated</th>
+                <th className="py-2 px-4 border">Type</th>
                 <th className="py-2 px-4 border">Actions</th>
               </tr>
             </thead>
@@ -335,13 +360,16 @@ const AllSubmissions: React.FC = () => {
                   </td>
                   <td className="py-2 px-4 border">{new Date(sub.createdAt).toLocaleString()}</td>
                   <td className="py-2 px-4 border">{new Date(sub.updatedAt).toLocaleString()}</td>
+                  <td className="py-2 px-4 border">
+                    <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${sub.type === 'OSCE' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>{sub.type}</span>
+                  </td>
                   <td className="py-2 px-4 border flex gap-2 justify-end items-center">
                     <Tooltip text="View Submission">
                       <button
                         className="inline-flex items-center justify-center bg-gray-100 border border-gray-300 text-primary rounded-full p-2 hover:bg-primary hover:text-white hover:border-primary transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                         aria-label="View submission"
                         type="button"
-                        onClick={() => handleViewClick(sub._id)}
+                        onClick={() => handleViewClick(sub._id, sub.type)}
                       >
                         <EyeIcon className="w-5 h-5" />
                       </button>
@@ -371,99 +399,109 @@ const AllSubmissions: React.FC = () => {
         </div>
       )}
       {/* Modal for viewing submission */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-3xl relative">
-            <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold"
-              onClick={() => setModalOpen(false)}
-            >
-              &times;
-            </button>
-            <h3 className="text-xl font-bold mb-4 text-primary">Question Details</h3>
-            {modalLoading ? (
-              <div className="text-center text-gray-500">Loading...</div>
-            ) : modalError ? (
-              <div className="text-center text-red-500">{modalError}</div>
-            ) : selectedSubmission ? (
-              <div className="space-y-4 text-left overflow-y-auto max-h-[70vh] pr-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <div className="mb-2"><span className="font-semibold">Subject:</span> {selectedSubmission.subject}</div>
-                    <div className="mb-2"><span className="font-semibold">Topic:</span> {selectedSubmission.topic}</div>
-                    {selectedSubmission.subtopic && (
-                      <div className="mb-2"><span className="font-semibold">Subtopic:</span> {selectedSubmission.subtopic}</div>
-                    )}
-                    <div className="mb-2"><span className="font-semibold">Reference:</span> {selectedSubmission.reference}</div>
-                  </div>
-                  <div>
-                    <div className="mb-2"><span className="font-semibold">Status:</span> <span className={`inline-block px-2 py-1 rounded text-xs font-bold
-                      ${selectedSubmission.status === 'approved' ? 'bg-green-100 text-green-700' :
-                        selectedSubmission.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                        'bg-yellow-100 text-yellow-700'}`}>{selectedSubmission.status}</span></div>
-                    <div className="mb-2"><span className="font-semibold">Rejection Reason:</span> <RejectionReasonCell reason={selectedSubmission.rejectionReason} /></div>
-                    <div className="mb-2"><span className="font-semibold">Submitted At:</span> {new Date(selectedSubmission.createdAt).toLocaleString()}</div>
-                    <div className="mb-2"><span className="font-semibold">Last Updated:</span> {new Date(selectedSubmission.updatedAt).toLocaleString()}</div>
-                  </div>
-                </div>
-                <div className="mb-2">
-                  <span className="font-semibold">Question:</span>
-                  <div className="mt-1 bg-gray-50 rounded p-3 border text-gray-800">{selectedSubmission.question}</div>
-                </div>
-                <div>
-                  <span className="font-semibold">Choices & Explanations:</span>
-                  <table className="w-full mt-2 border rounded bg-gray-50">
-                    <thead>
-                      <tr>
-                        <th className="px-2 py-1 text-left font-semibold text-gray-700">Choice</th>
-                        <th className="px-2 py-1 text-left font-semibold text-gray-700">Explanation</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedSubmission.choices?.map((c: string, i: number) => (
-                        <tr key={i} className="border-t">
-                          <td className="px-2 py-1 align-top">{c}</td>
-                          <td className="px-2 py-1 align-top">{selectedSubmission.explanations?.[i]}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {selectedSubmission.images && selectedSubmission.images.length > 0 && (
-                  <div>
-                    <span className="font-semibold">Images:</span>
-                    <div className="flex gap-2 flex-wrap mt-2">
-                      {selectedSubmission.images.map((img: string, idx: number) => (
-                        <img
-                          key={idx}
-                          src={`${API_BASE_URL}${img}`}
-                          alt={`submission-img-${idx}`}
-                          className="w-16 h-16 object-cover rounded border cursor-pointer"
-                          onClick={() => setFullImage(`${API_BASE_URL}${img}`)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : null}
-            <div className="flex justify-end mt-6">
+      {modalOpen && selectedSubmission && (
+        selectedSubmission.type === 'OSCE' ? (
+          <OsceStationViewModal
+            open={modalOpen}
+            onClose={() => setModalOpen(false)}
+            station={selectedSubmission}
+            loading={modalLoading}
+            error={modalError}
+          />
+        ) : (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+            <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-3xl relative">
               <button
-                className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-dark transition"
+                className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold"
                 onClick={() => setModalOpen(false)}
               >
-                Close
+                &times;
               </button>
+              <h3 className="text-xl font-bold mb-4 text-primary">Question Details</h3>
+              {modalLoading ? (
+                <div className="text-center text-gray-500">Loading...</div>
+              ) : modalError ? (
+                <div className="text-center text-red-500">{modalError}</div>
+              ) : selectedSubmission ? (
+                <div className="space-y-4 text-left overflow-y-auto max-h-[70vh] pr-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <div className="mb-2"><span className="font-semibold">Subject:</span> {selectedSubmission.subject}</div>
+                      <div className="mb-2"><span className="font-semibold">Topic:</span> {selectedSubmission.topic}</div>
+                      {selectedSubmission.subtopic && (
+                        <div className="mb-2"><span className="font-semibold">Subtopic:</span> {selectedSubmission.subtopic}</div>
+                      )}
+                      <div className="mb-2"><span className="font-semibold">Reference:</span> {selectedSubmission.reference}</div>
+                    </div>
+                    <div>
+                      <div className="mb-2"><span className="font-semibold">Status:</span> <span className={`inline-block px-2 py-1 rounded text-xs font-bold
+                        ${selectedSubmission.status === 'approved' ? 'bg-green-100 text-green-700' :
+                          selectedSubmission.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                          'bg-yellow-100 text-yellow-700'}`}>{selectedSubmission.status}</span></div>
+                      <div className="mb-2"><span className="font-semibold">Rejection Reason:</span> <RejectionReasonCell reason={selectedSubmission.rejectionReason} /></div>
+                      <div className="mb-2"><span className="font-semibold">Submitted At:</span> {new Date(selectedSubmission.createdAt).toLocaleString()}</div>
+                      <div className="mb-2"><span className="font-semibold">Last Updated:</span> {new Date(selectedSubmission.updatedAt).toLocaleString()}</div>
+                    </div>
+                  </div>
+                  <div className="mb-2">
+                    <span className="font-semibold">Question:</span>
+                    <div className="mt-1 bg-gray-50 rounded p-3 border text-gray-800">{selectedSubmission.question}</div>
+                  </div>
+                  <div>
+                    <span className="font-semibold">Choices & Explanations:</span>
+                    <table className="w-full mt-2 border rounded bg-gray-50">
+                      <thead>
+                        <tr>
+                          <th className="px-2 py-1 text-left font-semibold text-gray-700">Choice</th>
+                          <th className="px-2 py-1 text-left font-semibold text-gray-700">Explanation</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedSubmission.choices?.map((c: string, i: number) => (
+                          <tr key={i} className="border-t">
+                            <td className="px-2 py-1 align-top">{c}</td>
+                            <td className="px-2 py-1 align-top">{selectedSubmission.explanations?.[i]}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {selectedSubmission.images && selectedSubmission.images.length > 0 && (
+                    <div>
+                      <span className="font-semibold">Images:</span>
+                      <div className="flex gap-2 flex-wrap mt-2">
+                        {selectedSubmission.images.map((img: string, idx: number) => (
+                          <img
+                            key={idx}
+                            src={`${API_BASE_URL}${img}`}
+                            alt={`submission-img-${idx}`}
+                            className="w-16 h-16 object-cover rounded border cursor-pointer"
+                            onClick={() => setFullImage(`${API_BASE_URL}${img}`)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+              <div className="flex justify-end mt-6">
+                <button
+                  className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-dark transition"
+                  onClick={() => setModalOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
             </div>
+            {/* Fullscreen image overlay */}
+            {fullImage && (
+              <div className="fixed inset-0 z-60 flex items-center justify-center bg-black bg-opacity-90" onClick={() => setFullImage(undefined)}>
+                <img src={fullImage} alt="full" className="max-h-[90vh] max-w-[90vw] rounded shadow-lg" />
+                <button className="absolute top-8 right-8 text-white text-4xl font-bold" onClick={() => setFullImage(undefined)}>&times;</button>
+              </div>
+            )}
           </div>
-          {/* Fullscreen image overlay */}
-          {fullImage && (
-            <div className="fixed inset-0 z-60 flex items-center justify-center bg-black bg-opacity-90" onClick={() => setFullImage(undefined)}>
-              <img src={fullImage} alt="full" className="max-h-[90vh] max-w-[90vw] rounded shadow-lg" />
-              <button className="absolute top-8 right-8 text-white text-4xl font-bold" onClick={() => setFullImage(undefined)}>&times;</button>
-            </div>
-          )}
-        </div>
+        )
       )}
     </div>
   );

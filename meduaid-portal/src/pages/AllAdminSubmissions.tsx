@@ -3,6 +3,7 @@ import { subjectsStructure } from '../utils/subjectsStructure';
 import { useAuth } from '../context/AuthContext';
 import { FunnelIcon, UserGroupIcon, CalendarDaysIcon, BookOpenIcon, TagIcon, EyeIcon, TrashIcon, CheckCircleIcon, XCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
 import QuestionViewModal from '../components/QuestionViewModal';
+import OsceStationViewModal from '../components/OsceStationViewModal';
 
 const allCategories = ['All', ...Object.keys(subjectsStructure)];
 
@@ -34,12 +35,14 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
 const AllAdminSubmissions: React.FC = () => {
   const { jwt } = useAuth();
+  const [type, setType] = useState<'All' | 'SBA' | 'OSCE'>('All');
   const [category, setCategory] = useState('All');
   const [subject, setSubject] = useState('All');
   const [topic, setTopic] = useState('All');
   const [writer, setWriter] = useState('All');
   const [date, setDate] = useState('');
-  const [questions, setQuestions] = useState<any[]>([]);
+  const [questions, setQuestions] = useState<any[]>([]); // SBA
+  const [osceStations, setOsceStations] = useState<any[]>([]); // OSCE
   const [writers, setWriters] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -50,33 +53,111 @@ const AllAdminSubmissions: React.FC = () => {
   const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
   const [successMessage, setSuccessMessage] = useState('');
   const [allQuestions, setAllQuestions] = useState<any[]>([]); // for stats
+  const [osceFeedback, setOsceFeedback] = useState('');
+  const [osceActionLoading, setOsceActionLoading] = useState(false);
+  // Add state for bulk selection
+  const [selectedOsceIds, setSelectedOsceIds] = useState<string[]>([]);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
+  // Filtering logic for SBA and OSCE
+  const filteredSBA = questions.filter(q =>
+    (category === 'All' || q.category === category) &&
+    (subject === 'All' || q.subject === subject) &&
+    (topic === 'All' || q.topic === topic) &&
+    (writer === 'All' || q.writer?.name === writer) &&
+    (!date || q.createdAt.startsWith(date))
+  );
+  const filteredOSCE = osceStations.filter(q =>
+    (category === 'All' || q.category === category) &&
+    (subject === 'All' || q.subject === subject) &&
+    (topic === 'All' || q.topic === topic) &&
+    (writer === 'All' || q.writer?.name === writer) &&
+    (!date || q.createdAt.startsWith(date))
+  );
+
+  const allOsceIds = filteredOSCE.map(s => s._id);
+  const allSelected = selectedOsceIds.length === allOsceIds.length && allOsceIds.length > 0;
+  const toggleSelectAll = () => {
+    setSelectedOsceIds(allSelected ? [] : allOsceIds);
+  };
+  const toggleSelectOne = (id: string) => {
+    setSelectedOsceIds(selectedOsceIds.includes(id)
+      ? selectedOsceIds.filter(i => i !== id)
+      : [...selectedOsceIds, id]);
+  };
+  const handleBulkAction = async (status: 'approved' | 'rejected') => {
+    setBulkActionLoading(true);
+    try {
+      await Promise.all(selectedOsceIds.map(async id => {
+        await fetch(`${API_BASE_URL}/api/osce-stations/${id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${jwt}`,
+          },
+          body: JSON.stringify({ status }),
+        });
+      }));
+      setOsceStations(prev => prev.map(s => selectedOsceIds.includes(s._id) ? { ...s, status } : s));
+      setSelectedOsceIds([]);
+    } catch (err) {
+      alert('Bulk action failed.');
+    }
+    setBulkActionLoading(false);
+  };
+
+  // Fetch SBA or OSCE data based on type
   useEffect(() => {
-    const fetchSubmissions = async () => {
+    const fetchData = async () => {
       setLoading(true);
       setError('');
       try {
-        const response = await fetch(`${API_BASE_URL}/api/submissions`, {
-          headers: { Authorization: `Bearer ${jwt}` },
-        });
-        if (!response.ok) {
-          setError('Failed to fetch submissions');
-          setLoading(false);
-          return;
+        if (type === 'OSCE') {
+          const res = await fetch(`${API_BASE_URL}/api/osce-stations`, {
+            headers: { Authorization: `Bearer ${jwt}` },
+          });
+          if (!res.ok) throw new Error('Failed to fetch OSCE stations');
+          const data = await res.json();
+          setOsceStations(data);
+          // Extract unique writers
+          const uniqueWriters: string[] = Array.from(new Set(data.map((q: any) => q.writer?.name).filter((n: any): n is string => Boolean(n))));
+          setWriters(uniqueWriters);
+        } else if (type === 'All') {
+          const res = await fetch(`${API_BASE_URL}/api/admin/all-submissions`, {
+            headers: { Authorization: `Bearer ${jwt}` },
+          });
+          if (!res.ok) throw new Error('Failed to fetch all submissions');
+          const data = await res.json();
+          // Split into SBA and OSCE for filtering, but keep all for display
+          setQuestions(data.submissions.filter((q: any) => q.type === 'SBA'));
+          setOsceStations(data.submissions.filter((q: any) => q.type === 'OSCE'));
+          setAllQuestions(data.submissions);
+          // Extract unique writers
+          const uniqueWriters: string[] = Array.from(new Set(data.submissions.map((q: any) => q.writer?.name).filter((n: any): n is string => Boolean(n))));
+          setWriters(uniqueWriters);
+        } else {
+          const response = await fetch(`${API_BASE_URL}/api/submissions`, {
+            headers: { Authorization: `Bearer ${jwt}` },
+          });
+          if (!response.ok) {
+            setError('Failed to fetch submissions');
+            setLoading(false);
+            return;
+          }
+          const data = await response.json();
+          setQuestions(Array.isArray(data) ? data : data.submissions || []);
+          setAllQuestions(Array.isArray(data) ? data : data.submissions || []);
+          // Extract unique writers
+          const uniqueWriters: string[] = Array.from(new Set(data.map((q: any) => q.writer?.name).filter((n: any): n is string => Boolean(n))));
+          setWriters(uniqueWriters);
         }
-        const data = await response.json();
-        setQuestions(Array.isArray(data) ? data : data.submissions || []);
-        setAllQuestions(Array.isArray(data) ? data : data.submissions || []);
-        // Extract unique writers
-        const uniqueWriters: string[] = Array.from(new Set(data.map((q: any) => q.writer?.name).filter((n: any): n is string => Boolean(n))));
-        setWriters(uniqueWriters);
       } catch {
         setError('Network error');
       }
       setLoading(false);
     };
-    if (jwt) fetchSubmissions();
-  }, [jwt]);
+    if (jwt) fetchData();
+  }, [jwt, type]);
 
   const handleReasonChange = (id: string, reason: string) => {
     setQuestions(prev => prev.map(q => q._id === id ? { ...q, rejectionReason: reason } : q));
@@ -98,16 +179,23 @@ const AllAdminSubmissions: React.FC = () => {
   };
 
   // Handle View button click
-  const handleViewClick = async (id: string) => {
+  const handleViewClick = async (id: string, type?: string) => {
     setModalLoading(true);
     setModalError('');
     setSelectedSubmission(null);
     setModalOpen(true);
     setModalMode('view');
     try {
-      const res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
-        headers: { Authorization: `Bearer ${jwt}` },
-      });
+      let res;
+      if (type === 'OSCE') {
+        res = await fetch(`${API_BASE_URL}/api/osce-stations/${id}`, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+      } else {
+        res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+      }
       if (!res.ok) {
         setModalError('Failed to fetch submission.');
         setModalLoading(false);
@@ -140,14 +228,6 @@ const AllAdminSubmissions: React.FC = () => {
     }
   };
 
-  const filtered = questions.filter(q =>
-    (category === 'All' || q.category === category) &&
-    (subject === 'All' || q.subject === subject) &&
-    (topic === 'All' || q.topic === topic) &&
-    (writer === 'All' || q.writer?.name === writer) &&
-    (!date || q.createdAt.startsWith(date))
-  );
-
   // Export handler
   const handleExport = () => {
     const columns = [
@@ -159,7 +239,7 @@ const AllAdminSubmissions: React.FC = () => {
       { label: 'Rejection Reason', key: 'rejectionReason' },
       { label: 'Question', key: 'question' },
     ];
-    const rows = filtered.map(q => ({
+    const rows = filteredSBA.map(q => ({
       createdAt: new Date(q.createdAt).toLocaleString(),
       writerName: q.writer?.name || '-',
       subject: q.subject,
@@ -187,6 +267,16 @@ const AllAdminSubmissions: React.FC = () => {
         {/* Enhanced Filters Section */}
         <div className="mb-8">
           <div className="bg-gray-50 border border-gray-200 rounded-xl p-2 sm:p-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:gap-6 items-stretch shadow-sm">
+            <div className="flex flex-col min-w-[160px] w-full sm:w-auto mb-2 sm:mb-0">
+              <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700">
+                <FunnelIcon className="w-4 h-4 text-primary" /> Type
+              </label>
+              <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900" value={type} onChange={e => setType(e.target.value as 'All' | 'SBA' | 'OSCE')}>
+                <option value="All">All</option>
+                <option value="SBA">SBA</option>
+                <option value="OSCE">OSCE</option>
+              </select>
+            </div>
             <div className="flex flex-col min-w-[160px] w-full sm:w-auto mb-2 sm:mb-0">
               <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700">
                 <TagIcon className="w-4 h-4 text-primary" /> Category
@@ -278,49 +368,51 @@ const AllAdminSubmissions: React.FC = () => {
           <button
             className="bg-primary text-white px-4 py-2 rounded font-semibold hover:bg-primary-dark transition"
             onClick={handleExport}
-            disabled={filtered.length === 0}
+            disabled={filteredSBA.length === 0}
           >
             Export Filtered as CSV
           </button>
         </div>
+        {/* Table Section */}
         {loading ? (
           <div className="flex justify-center items-center min-h-[120px] text-center text-gray-300">Loading...</div>
         ) : error ? (
           <div className="flex justify-center items-center min-h-[120px] text-center text-red-500">{error}</div>
-        ) : filtered.length === 0 ? (
-          <div className="flex justify-center items-center min-h-[120px] text-center text-gray-300">No data to be displayed.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-[600px] w-full text-left rounded-xl overflow-hidden bg-white text-sm sm:text-base">
-              <thead>
-                <tr className="bg-gray-100 text-gray-700">
-                  <th className="py-3 px-6 font-semibold">Timestamp</th>
-                  <th className="py-3 px-6 font-semibold">Writer</th>
-                  <th className="py-3 px-6 font-semibold">Subject / Topic</th>
-                  <th className="py-3 px-6 font-semibold">Status</th>
-                  <th className="py-3 px-6 font-semibold">Rejection Reason</th>
-                  <th className="py-3 px-6 font-semibold"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered
-                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                  .map((q) => (
-                    <tr key={q._id} className="border-t align-top hover:bg-blue-50 hover:shadow-md transition">
-                      <td className="py-3 px-6">{new Date(q.createdAt).toLocaleString()}</td>
-                      <td className="py-3 px-6">
-                        <div className="flex items-center gap-2">
-                          <img src="/meduaid-logo.svg" alt="avatar" className="w-8 h-8 rounded-full bg-blue-200 object-cover" />
-                          <span>{q.writer?.name || '-'}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-6">{(q.subject || '-') + ' / ' + (q.topic || '-')}</td>
-                      <td className="py-3 px-6">
-                        <Tooltip text={
-                          q.status === 'approved' ? 'This question is approved.' :
-                          q.status === 'pending' ? 'This question is pending review.' :
-                          'This question was rejected.'
-                        }>
+        ) : type === 'All' ? (
+          (allQuestions.length === 0) ? (
+            <div className="flex justify-center items-center min-h-[120px] text-center text-gray-300">No data to be displayed.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-[600px] w-full text-left rounded-xl overflow-hidden bg-white text-sm sm:text-base">
+                <thead>
+                  <tr className="bg-gray-100 text-gray-700">
+                    <th className="py-3 px-6 font-semibold">Timestamp</th>
+                    <th className="py-3 px-6 font-semibold">Type</th>
+                    <th className="py-3 px-6 font-semibold">Writer</th>
+                    <th className="py-3 px-6">Title / Question</th>
+                    <th className="py-3 px-6">Subject / Topic</th>
+                    <th className="py-3 px-6">Status</th>
+                    <th className="py-3 px-6 font-semibold"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allQuestions
+                    .filter(q =>
+                      (category === 'All' || q.category === category) &&
+                      (subject === 'All' || q.subject === subject) &&
+                      (topic === 'All' || q.topic === topic) &&
+                      (writer === 'All' || q.writer?.name === writer) &&
+                      (!date || q.createdAt.startsWith(date))
+                    )
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .map((q) => (
+                      <tr key={q._id} className="border-t align-top hover:bg-blue-50 hover:shadow-md transition">
+                        <td className="py-3 px-6">{new Date(q.createdAt).toLocaleString()}</td>
+                        <td className="py-3 px-6">{q.type}</td>
+                        <td className="py-3 px-6">{q.writer?.name || '-'}</td>
+                        <td className="py-3 px-6">{q.type === 'SBA' ? q.question : q.title}</td>
+                        <td className="py-3 px-6">{(q.subject || '-') + ' / ' + (q.topic || '-')}</td>
+                        <td className="py-3 px-6">
                           <span
                             className={
                               q.status === 'approved'
@@ -332,54 +424,118 @@ const AllAdminSubmissions: React.FC = () => {
                           >
                             {q.status.charAt(0).toUpperCase() + q.status.slice(1)}
                           </span>
-                        </Tooltip>
-                      </td>
-                      <td className="py-3 px-6">
-                        {q.status === 'rejected' ? (
-                          <>
-                            <input
-                              type="text"
-                              className="border rounded px-2 py-1 w-full mb-1 bg-white text-gray-900"
-                              value={q.rejectionReason || ''}
-                              onChange={e => handleReasonChange(q._id, e.target.value)}
-                              placeholder="Enter reason"
-                            />
-                            <button
-                              className="bg-primary text-white px-2 py-1 rounded text-xs"
-                              onClick={() => handleSaveReason(q._id, q.rejectionReason || '')}
-                            >
-                              Save
-                            </button>
-                          </>
-                        ) : '-'}
-                      </td>
-                      <td className="py-3 px-6 text-right flex gap-2 justify-end items-center">
-                        <Tooltip text="View Submission">
+                        </td>
+                        <td className="py-3 px-6 text-right flex gap-2 justify-end items-center">
                           <button
                             className="inline-flex items-center justify-center bg-gray-100 border border-gray-300 text-primary rounded-full p-2 hover:bg-primary hover:text-white hover:border-primary transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                             aria-label="View submission"
                             type="button"
-                            onClick={() => handleViewClick(q._id)}
+                            onClick={() => handleViewClick(q._id, q.type)}
                           >
-                            <EyeIcon className="w-5 h-5" />
+                            View
                           </button>
-                        </Tooltip>
-                        <Tooltip text="Delete Submission">
-                          <button
-                            className="inline-flex items-center justify-center bg-gray-100 border border-gray-300 text-red-500 rounded-full p-2 hover:bg-red-500 hover:text-white hover:border-red-500 transition focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                            aria-label="Delete submission"
-                            type="button"
-                            onClick={() => handleDelete(q._id)}
-                          >
-                            <TrashIcon className="w-5 h-5" />
-                          </button>
-                        </Tooltip>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : (
+          filteredSBA.length === 0 ? (
+            <div className="flex justify-center items-center min-h-[120px] text-center text-gray-300">No data to be displayed.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-[600px] w-full text-left rounded-xl overflow-hidden bg-white text-sm sm:text-base">
+                <thead>
+                  <tr className="bg-gray-100 text-gray-700">
+                    <th className="py-3 px-6 font-semibold">Timestamp</th>
+                    <th className="py-3 px-6 font-semibold">Writer</th>
+                    <th className="py-3 px-6 font-semibold">Subject / Topic</th>
+                    <th className="py-3 px-6 font-semibold">Status</th>
+                    <th className="py-3 px-6 font-semibold">Rejection Reason</th>
+                    <th className="py-3 px-6 font-semibold"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSBA
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .map((q) => (
+                      <tr key={q._id} className="border-t align-top hover:bg-blue-50 hover:shadow-md transition">
+                        <td className="py-3 px-6">{new Date(q.createdAt).toLocaleString()}</td>
+                        <td className="py-3 px-6">
+                          <div className="flex items-center gap-2">
+                            <img src="/meduaid-logo.svg" alt="avatar" className="w-8 h-8 rounded-full bg-blue-200 object-cover" />
+                            <span>{q.writer?.name || '-'}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-6">{(q.subject || '-') + ' / ' + (q.topic || '-')}</td>
+                        <td className="py-3 px-6">
+                          <Tooltip text={
+                            q.status === 'approved' ? 'This question is approved.' :
+                            q.status === 'pending' ? 'This question is pending review.' :
+                            'This question was rejected.'
+                          }>
+                            <span
+                              className={
+                                q.status === 'approved'
+                                  ? 'inline-block px-3 py-1 rounded-full bg-green-100 text-green-700 font-semibold text-xs'
+                                  : q.status === 'pending'
+                                  ? 'inline-block px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 font-semibold text-xs'
+                                  : 'inline-block px-3 py-1 rounded-full bg-red-100 text-red-700 font-semibold text-xs'
+                              }
+                            >
+                              {q.status.charAt(0).toUpperCase() + q.status.slice(1)}
+                            </span>
+                          </Tooltip>
+                        </td>
+                        <td className="py-3 px-6">
+                          {q.status === 'rejected' ? (
+                            <>
+                              <input
+                                type="text"
+                                className="border rounded px-2 py-1 w-full mb-1 bg-white text-gray-900"
+                                value={q.rejectionReason || ''}
+                                onChange={e => handleReasonChange(q._id, e.target.value)}
+                                placeholder="Enter reason"
+                              />
+                              <button
+                                className="bg-primary text-white px-2 py-1 rounded text-xs"
+                                onClick={() => handleSaveReason(q._id, q.rejectionReason || '')}
+                              >
+                                Save
+                              </button>
+                            </>
+                          ) : '-'}
+                        </td>
+                        <td className="py-3 px-6 text-right flex gap-2 justify-end items-center">
+                          <Tooltip text="View Submission">
+                            <button
+                              className="inline-flex items-center justify-center bg-gray-100 border border-gray-300 text-primary rounded-full p-2 hover:bg-primary hover:text-white hover:border-primary transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                              aria-label="View submission"
+                              type="button"
+                              onClick={() => handleViewClick(q._id, 'SBA')}
+                            >
+                              <EyeIcon className="w-5 h-5" />
+                            </button>
+                          </Tooltip>
+                          <Tooltip text="Delete Submission">
+                            <button
+                              className="inline-flex items-center justify-center bg-gray-100 border border-gray-300 text-red-500 rounded-full p-2 hover:bg-red-500 hover:text-white hover:border-red-500 transition focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                              aria-label="Delete submission"
+                              type="button"
+                              onClick={() => handleDelete(q._id)}
+                            >
+                              <TrashIcon className="w-5 h-5" />
+                            </button>
+                          </Tooltip>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          )
         )}
         {successMessage && (
           <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-2 rounded shadow-lg z-50 text-center">
@@ -387,75 +543,105 @@ const AllAdminSubmissions: React.FC = () => {
           </div>
         )}
         {/* Modal for viewing submission */}
-        {modalOpen && (
-          <QuestionViewModal
-            open={modalOpen}
-            onClose={() => setModalOpen(false)}
-            question={selectedSubmission}
-            loading={modalLoading}
-            error={modalError}
-          >
-            {modalMode === 'view' && selectedSubmission && (
-              <div className="flex flex-col gap-2">
-                <label className="font-semibold">Update Status:</label>
-                <select
-                  className="border rounded px-2 py-1 text-gray-900"
-                  value={selectedSubmission.status}
-                  disabled={modalLoading}
-                  onChange={async e => {
-                    const newStatus = e.target.value;
-                    setModalLoading(true);
-                    try {
-                      const res = await fetch(`${API_BASE_URL}/api/submissions/${selectedSubmission._id}`, {
-                        method: 'PATCH',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          Authorization: `Bearer ${jwt}`,
-                        },
-                        body: JSON.stringify({ status: newStatus }),
-                      });
-                      if (res.ok) {
-                        const updated = await res.json();
-                        setSelectedSubmission(updated);
-                        setQuestions(prev => prev.map(q => q._id === updated._id ? updated : q));
+        {modalOpen && selectedSubmission && (
+          selectedSubmission.type === 'OSCE' ? (
+            <OsceStationViewModal
+              open={modalOpen}
+              onClose={() => setModalOpen(false)}
+              station={selectedSubmission}
+              loading={modalLoading}
+              error={modalError}
+            />
+          ) : (
+            <QuestionViewModal
+              open={modalOpen}
+              onClose={() => setModalOpen(false)}
+              question={selectedSubmission}
+              loading={modalLoading}
+              error={modalError}
+            >
+              {modalMode === 'view' && selectedSubmission && (
+                <div className="flex flex-col gap-2">
+                  <label className="font-semibold">Update Status:</label>
+                  <select
+                    className="border rounded px-2 py-1 text-gray-900"
+                    value={selectedSubmission.status}
+                    disabled={modalLoading}
+                    onChange={async e => {
+                      const newStatus = e.target.value;
+                      setModalLoading(true);
+                      try {
+                        const res = await fetch(`${API_BASE_URL}/api/submissions/${selectedSubmission._id}`, {
+                          method: 'PATCH',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${jwt}`,
+                          },
+                          body: JSON.stringify({ status: newStatus }),
+                        });
+                        if (res.ok) {
+                          const updated = await res.json();
+                          setSelectedSubmission(updated);
+                          setQuestions(prev => prev.map(q => q._id === updated._id ? updated : q));
+                        }
+                      } finally {
+                        setModalLoading(false);
                       }
-                    } finally {
-                      setModalLoading(false);
-                    }
+                    }}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                  <button
+                    className="px-4 py-2 rounded bg-primary text-white font-semibold hover:bg-primary-dark transition mt-2"
+                    onClick={() => setModalMode('edit')}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="bg-red-500 text-white px-4 py-2 rounded font-semibold hover:bg-red-600 transition mt-2"
+                    onClick={() => handleDelete(selectedSubmission._id)}
+                    disabled={modalLoading}
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+              {modalMode === 'edit' && selectedSubmission && (
+                <AdminEditQuestionForm
+                  submission={selectedSubmission}
+                  onClose={() => setModalMode('view')}
+                  onSave={updated => {
+                    setQuestions(prev => prev.map(q => q._id === updated._id ? updated : q));
+                    setSelectedSubmission(updated);
+                    setModalMode('view');
                   }}
-                >
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-                <button
-                  className="px-4 py-2 rounded bg-primary text-white font-semibold hover:bg-primary-dark transition mt-2"
-                  onClick={() => setModalMode('edit')}
-                >
-                  Edit
-                </button>
-                <button
-                  className="bg-red-500 text-white px-4 py-2 rounded font-semibold hover:bg-red-600 transition mt-2"
-                  onClick={() => handleDelete(selectedSubmission._id)}
-                  disabled={modalLoading}
-                >
-                  Delete
-                </button>
-              </div>
-            )}
-            {modalMode === 'edit' && selectedSubmission && (
-              <AdminEditQuestionForm
-                submission={selectedSubmission}
-                onClose={() => setModalMode('view')}
-                onSave={updated => {
-                  setQuestions(prev => prev.map(q => q._id === updated._id ? updated : q));
-                  setSelectedSubmission(updated);
-                  setModalMode('view');
-                }}
-                jwt={jwt || ''}
-              />
-            )}
-          </QuestionViewModal>
+                  jwt={jwt || ''}
+                />
+              )}
+            </QuestionViewModal>
+          )
+        )}
+        {/* OSCE Modal */}
+        {type === 'OSCE' && (
+          <div className="flex gap-2 mb-2">
+            <button
+              className="bg-green-600 text-white px-3 py-1 rounded font-semibold disabled:opacity-50"
+              disabled={selectedOsceIds.length === 0 || bulkActionLoading}
+              onClick={() => handleBulkAction('approved')}
+            >
+              Approve Selected
+            </button>
+            <button
+              className="bg-red-600 text-white px-3 py-1 rounded font-semibold disabled:opacity-50"
+              disabled={selectedOsceIds.length === 0 || bulkActionLoading}
+              onClick={() => handleBulkAction('rejected')}
+            >
+              Reject Selected
+            </button>
+            <span className="text-sm text-gray-500 ml-2">{selectedOsceIds.length} selected</span>
+          </div>
         )}
       </div>
     </div>
@@ -661,6 +847,60 @@ function AdminEditQuestionForm({ submission, onClose, onSave, jwt }: { submissio
         <button type="button" className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-semibold" onClick={onClose} disabled={saving}>Cancel</button>
         <button type="submit" className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-dark transition" disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
       </div>
+    </form>
+  );
+}
+
+function OsceEditForm({ station, onClose, onSave, jwt }: { station: any, onClose: () => void, onSave: (updated: any) => void, jwt: string }) {
+  const [form, setForm] = React.useState<any>({ ...station });
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState('');
+  const handleChange = (field: string, value: any) => {
+    setForm((f: any) => ({ ...f, [field]: value }));
+  };
+  const handleArrayChange = (field: string, idx: number, value: string) => {
+    setForm((f: any) => ({ ...f, [field]: f[field].map((v: string, i: number) => i === idx ? value : v) }));
+  };
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/osce-stations/${form._id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) {
+        setError('Failed to save changes');
+        setSaving(false);
+        return;
+      }
+      const updated = await res.json();
+      onSave(updated);
+    } catch {
+      setError('Network error');
+    }
+    setSaving(false);
+  };
+  return (
+    <form className="space-y-4" onSubmit={e => { e.preventDefault(); handleSave(); }}>
+      <div>
+        <label className="block mb-1 font-medium">Title</label>
+        <input value={form.title} onChange={e => handleChange('title', e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900" />
+      </div>
+      <div>
+        <label className="block mb-1 font-medium">Case Description</label>
+        <textarea value={form.caseDescription} onChange={e => handleChange('caseDescription', e.target.value)} className="w-full px-4 py-2 border rounded-lg min-h-[80px] bg-white text-gray-900" />
+      </div>
+      {/* Add more fields as needed (historySections, markingScheme, followUps, etc.) */}
+      <div className="flex justify-end gap-2 mt-6">
+        <button type="button" className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-semibold" onClick={onClose} disabled={saving}>Cancel</button>
+        <button type="submit" className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-dark transition" disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
+      </div>
+      {error && <div className="text-red-500 text-center">{error}</div>}
     </form>
   );
 }

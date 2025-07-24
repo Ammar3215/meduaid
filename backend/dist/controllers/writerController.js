@@ -15,7 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getPenalties = exports.getStats = void 0;
 const Submission_1 = __importDefault(require("../models/Submission"));
 const Penalty_1 = __importDefault(require("../models/Penalty"));
-const mongoose_1 = __importDefault(require("mongoose"));
+const OsceStation_1 = __importDefault(require("../models/OsceStation"));
 const getStats = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const user = req.user;
@@ -24,27 +24,20 @@ const getStats = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             return;
         }
         const writerId = user.id;
-        const totalSubmissions = yield Submission_1.default.countDocuments({ writer: writerId });
-        const submissionsByStatus = yield Submission_1.default.aggregate([
-            { $match: { writer: new mongoose_1.default.Types.ObjectId(writerId) } },
-            { $group: { _id: '$status', count: { $sum: 1 } } }
-        ]);
-        const recentSubmissionsDocs = yield Submission_1.default.find({ writer: writerId }).sort({ createdAt: -1 });
-        const recentSubmissions = recentSubmissionsDocs.map(sub => ({
-            _id: sub._id,
-            category: sub.category,
-            subject: sub.subject,
-            topic: sub.topic,
-            question: sub.question,
-            choices: sub.choices,
-            explanations: sub.explanations,
-            reference: sub.reference,
-            images: sub.images,
-            status: sub.status,
-            rejectionReason: sub.rejectionReason,
-            createdAt: sub.createdAt,
-            updatedAt: sub.updatedAt,
-        }));
+        // SBA
+        const sbaDocs = yield Submission_1.default.find({ writer: writerId });
+        const sba = sbaDocs.map(sub => (Object.assign(Object.assign({}, sub.toObject()), { type: 'SBA' })));
+        // OSCE
+        const osceDocs = yield OsceStation_1.default.find({ writer: writerId });
+        const osce = osceDocs.map(station => (Object.assign(Object.assign({}, station.toObject()), { type: 'OSCE' })));
+        // Merge and sort
+        const recentSubmissions = [...sba, ...osce].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        // Stats
+        const totalSubmissions = recentSubmissions.length;
+        const submissionsByStatus = recentSubmissions.reduce((acc, q) => {
+            acc[q.status] = (acc[q.status] || 0) + 1;
+            return acc;
+        }, {});
         res.json({
             totalSubmissions,
             submissionsByStatus,
