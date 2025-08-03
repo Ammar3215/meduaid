@@ -17,7 +17,7 @@ interface OsceStationViewModalProps {
 
 const OsceStationViewModal: React.FC<OsceStationViewModalProps> = (props) => {
   const { open, onClose, station, loading, error, user: userProp, onSave, onAction, children } = props;
-  const { user: contextUser, isAuthenticated } = useAuth();
+  const { user: contextUser } = useAuth();
   const user = userProp || contextUser;
   const [editOpen, setEditOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
@@ -25,7 +25,7 @@ const OsceStationViewModal: React.FC<OsceStationViewModalProps> = (props) => {
   const [currentStation, setCurrentStation] = useState<any>(station);
   const [showRejectionReason, setShowRejectionReason] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [rejectionLoading, setRejectionLoading] = useState(false);
+  const [rejectionLoading] = useState(false);
 
   React.useEffect(() => {
     setCurrentStation(station);

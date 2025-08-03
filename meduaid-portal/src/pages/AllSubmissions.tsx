@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 interface Submission {
   _id: string;
   question: string;
+  title?: string; // For OSCE stations
   status: string;
   rejectionReason?: string;
   createdAt: string;

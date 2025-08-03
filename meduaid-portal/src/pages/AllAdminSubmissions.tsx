@@ -659,7 +659,6 @@ const AllAdminSubmissions: React.FC = () => {
                     setSelectedSubmission(updated);
                     setModalMode('view');
                   }}
-                  jwt={jwt || ''}
                 />
               )}
             </QuestionViewModal>

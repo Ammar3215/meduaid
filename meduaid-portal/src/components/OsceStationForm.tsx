@@ -157,7 +157,6 @@ const OsceStationForm: React.FC<OsceStationFormProps> = ({ mode, initialData, on
   const handleOsceImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    const newPreviews: string[] = [];
     Array.from(files).forEach(file => {
       const reader = new FileReader();
       reader.onload = ev => {

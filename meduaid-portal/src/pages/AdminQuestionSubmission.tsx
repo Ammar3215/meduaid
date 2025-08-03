@@ -106,7 +106,7 @@ const AdminQuestionSubmission: React.FC = () => {
     'ICE (Ideas, Concerns, Expectations)',
     'Summary and Closure',
   ];
-  const [osceHistorySections, setOsceHistorySections] = useState<{ [key: string]: string }>(
+  const [osceHistorySections] = useState<{ [key: string]: string }>(
     Object.fromEntries(historySectionKeys.map(k => [k, '']))
   );
 

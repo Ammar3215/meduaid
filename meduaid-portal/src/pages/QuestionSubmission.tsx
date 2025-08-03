@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { subjectsStructure } from '../utils/subjectsStructure';
-import { useAuth } from '../context/AuthContext';
 import { ClipboardDocumentListIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 
 const questionSchema = z.object({
@@ -33,7 +32,6 @@ const osceStationTypes = [
 ];
 
 const QuestionSubmission: React.FC = () => {
-  const { isAuthenticated } = useAuth();
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

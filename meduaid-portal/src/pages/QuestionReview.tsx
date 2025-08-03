@@ -571,7 +571,6 @@ const QuestionReview: React.FC = () => {
                     setEditData(null);
                     setDetailsModal({ open: false, question: null });
                   }}
-                  jwt={jwt || ''}
                 />
               )}
               <div className="flex justify-end mt-6">

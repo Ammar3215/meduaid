@@ -10,7 +10,7 @@ interface OsceStationEditModalProps {
   error?: string;
 }
 
-const OsceStationEditModal: React.FC<OsceStationEditModalProps> = ({ open, onClose, station, onSave, loading, error }) => {
+const OsceStationEditModal: React.FC<OsceStationEditModalProps> = ({ open, onClose, station, onSave, error }) => {
   const [localError, setLocalError] = useState('');
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
