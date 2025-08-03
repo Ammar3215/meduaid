@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { subjectsStructure } from '../utils/subjectsStructure';
 import QuestionViewModal from '../components/QuestionViewModal';
 import Skeleton from '../components/Skeleton';
-import { AdminEditQuestionForm } from './AllAdminSubmissions';
+import AdminEditQuestionForm from '../components/AdminEditQuestionForm';
 import OsceStationViewModal from '../components/OsceStationViewModal';
 
 const COLORS = [
@@ -46,7 +46,7 @@ const AnimatedCounter = ({ value, className = '' }: { value: number, className?:
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
 const AdminDashboard: React.FC = () => {
-  const { jwt } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [stats, setStats] = useState<any>(null);
   const [penalties, setPenalties] = useState<any[]>([]);
   const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
@@ -98,7 +98,7 @@ const AdminDashboard: React.FC = () => {
     const fetchStats = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/api/admin/stats`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+          credentials: 'include',
         });
         if (!response.ok) {
           return;
@@ -110,7 +110,7 @@ const AdminDashboard: React.FC = () => {
     const fetchPenalties = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/api/admin/penalties`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+          credentials: 'include',
         });
         if (response.ok) {
           const data = await response.json();
@@ -118,11 +118,11 @@ const AdminDashboard: React.FC = () => {
         }
       } catch {}
     };
-    if (jwt) {
+    if (isAuthenticated) {
       fetchStats();
       fetchPenalties();
     }
-  }, [jwt]);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (stats) {
@@ -172,11 +172,11 @@ const AdminDashboard: React.FC = () => {
       let res;
       if (type === 'OSCE') {
         res = await fetch(`${API_BASE_URL}/api/osce-stations/${id}`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+          credentials: 'include',
         });
       } else {
         res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+          credentials: 'include',
         });
       }
       if (!res.ok) {
@@ -483,8 +483,8 @@ const AdminDashboard: React.FC = () => {
                           method: 'PATCH',
                           headers: {
                             'Content-Type': 'application/json',
-                            Authorization: `Bearer ${jwt}`,
                           },
+                          credentials: 'include',
                           body: JSON.stringify({ status: newStatus }),
                         });
                         if (res.ok) {
@@ -531,7 +531,6 @@ const AdminDashboard: React.FC = () => {
                     setIsEditing(false);
                     setEditData(null);
                   }}
-                  jwt={jwt || ''}
                 />
               )}
             </QuestionViewModal>

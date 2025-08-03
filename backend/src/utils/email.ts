@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 
-console.log('Loaded Gmail credentials:', process.env.GMAIL_USER, process.env.GMAIL_PASS ? '✅' : '❌');
+console.log('Email service initialized:', process.env.GMAIL_USER ? '✅' : '❌');
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -13,11 +13,8 @@ const transporter = nodemailer.createTransport({
 const frontendBaseUrl = process.env.FRONTEND_BASE_URL || 'http://localhost:5173';
 
 export async function sendVerificationEmail(to: string, token: string) {
-  console.log('sendVerificationEmail called with:');
-  console.log('To:', to);
-  console.log('Token:', token);
+  console.log('Sending verification email to:', to.replace(/(.{2}).*(@.*)/, '$1***$2'));
   const verificationUrl = `${frontendBaseUrl}/verify-email?token=${token}`;
-  console.log('Verification link:', verificationUrl);
   const info = await transporter.sendMail({
     from: 'no-reply@meduaid.com',
     to,
@@ -30,6 +27,7 @@ export async function sendVerificationEmail(to: string, token: string) {
 }
 
 export async function sendPasswordResetEmail(to: string, token: string) {
+  console.log('Sending password reset email to:', to.replace(/(.{2}).*(@.*)/, '$1***$2'));
   const resetUrl = `${frontendBaseUrl}/reset-password?token=${token}`;
   const info = await transporter.sendMail({
     from: 'no-reply@meduaid.com',

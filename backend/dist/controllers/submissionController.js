@@ -58,6 +58,12 @@ const createSubmission = (req, res) => __awaiter(void 0, void 0, void 0, functio
     }
 });
 exports.createSubmission = createSubmission;
+// Input sanitization helper
+const sanitizeStringInput = (input) => {
+    if (typeof input !== 'string' || input.trim() === '')
+        return null;
+    return input.trim();
+};
 // Get submissions (writer: own, admin: all, with filters)
 const getSubmissions = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -67,20 +73,30 @@ const getSubmissions = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if ((user === null || user === void 0 ? void 0 : user.role) === 'writer') {
             filter.writer = user.id;
             if (status) {
-                // Support comma-separated status (e.g., 'rejected,draft')
-                const statusArr = String(status).split(',');
-                filter.status = { $in: statusArr };
+                // Sanitize status input and support comma-separated values
+                const sanitizedStatus = sanitizeStringInput(status);
+                if (sanitizedStatus) {
+                    const statusArr = sanitizedStatus.split(',').map(s => s.trim()).filter(s => ['pending', 'approved', 'rejected', 'draft'].includes(s));
+                    if (statusArr.length > 0) {
+                        filter.status = { $in: statusArr };
+                    }
+                }
             }
         }
         else if ((user === null || user === void 0 ? void 0 : user.role) === 'admin') {
             if (status) {
-                // Only show drafts if explicitly requested
-                const statusArr = String(status).split(',');
-                if (!statusArr.includes('draft')) {
-                    filter.status = { $in: statusArr.filter(s => s !== 'draft') };
-                }
-                else {
-                    filter.status = { $in: statusArr };
+                // Sanitize status input for admin
+                const sanitizedStatus = sanitizeStringInput(status);
+                if (sanitizedStatus) {
+                    const statusArr = sanitizedStatus.split(',').map(s => s.trim()).filter(s => ['pending', 'approved', 'rejected', 'draft'].includes(s));
+                    if (statusArr.length > 0) {
+                        if (!statusArr.includes('draft')) {
+                            filter.status = { $in: statusArr.filter(s => s !== 'draft') };
+                        }
+                        else {
+                            filter.status = { $in: statusArr };
+                        }
+                    }
                 }
             }
             else {
@@ -88,15 +104,23 @@ const getSubmissions = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 filter.status = { $ne: 'draft' };
             }
             if (writer) {
-                filter.writer = writer;
+                // Sanitize writer input - must be a valid string
+                const sanitizedWriter = sanitizeStringInput(writer);
+                if (sanitizedWriter) {
+                    filter.writer = sanitizedWriter;
+                }
             }
         }
-        if (category)
-            filter.category = category;
-        if (subject)
-            filter.subject = subject;
-        if (topic)
-            filter.topic = topic;
+        // Sanitize category, subject, topic inputs
+        const sanitizedCategory = sanitizeStringInput(category);
+        if (sanitizedCategory)
+            filter.category = sanitizedCategory;
+        const sanitizedSubject = sanitizeStringInput(subject);
+        if (sanitizedSubject)
+            filter.subject = sanitizedSubject;
+        const sanitizedTopic = sanitizeStringInput(topic);
+        if (sanitizedTopic)
+            filter.topic = sanitizedTopic;
         const submissions = yield Submission_1.default.find(filter).populate('writer', 'name email');
         res.json(submissions);
     }
@@ -126,8 +150,16 @@ const updateSubmissionStatus = (req, res) => __awaiter(void 0, void 0, void 0, f
                 res.status(400).json({ message: 'Invalid status value' });
                 return;
             }
-            // Build update object
-            const updateObj = Object.assign({}, rest);
+            // SECURITY FIX: Whitelist allowed fields instead of using spread operator
+            const allowedFields = ['question', 'choices', 'explanations', 'reference', 'difficulty', 'category', 'subject', 'topic', 'subtopic'];
+            const updateObj = {};
+            // Only allow specific fields to be updated
+            allowedFields.forEach(field => {
+                if (rest[field] !== undefined) {
+                    updateObj[field] = rest[field];
+                }
+            });
+            // Add admin-specific fields
             if (status)
                 updateObj.status = status;
             if (rejectionReason !== undefined)

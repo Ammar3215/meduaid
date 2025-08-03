@@ -103,6 +103,11 @@ export const createPenalty: RequestHandler = async (req, res) => {
 
 export const getWriters: RequestHandler = async (req, res) => {
   try {
+    const user = (req as any).user;
+    if (!user || user.role !== 'admin') {
+      res.status(403).json({ message: 'Forbidden' });
+      return;
+    }
     const writers = await User.find({ role: 'writer' }).select('name email');
     res.json(writers);
   } catch (err) {

@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useAuth } from '../context/AuthContext';
 import Skeleton from '../components/Skeleton';
 import { subjectsStructure } from '../utils/subjectsStructure';
+import OsceStationForm from '../components/OsceStationForm';
 
 type EditFormInputs = {
   question: string;
@@ -34,7 +35,7 @@ function RejectionReasonCell({ reason = '-' }) {
 }
 
 const EditQuestions: React.FC = () => {
-  const { jwt } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [questions, setQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -62,6 +63,11 @@ const EditQuestions: React.FC = () => {
   const [editTopic, setEditTopic] = useState('');
   const [editSubtopic, setEditSubtopic] = useState('');
 
+  const [osceEditId, setOsceEditId] = useState<string | null>(null);
+  const [osceEditData, setOsceEditData] = useState<any>(null);
+
+  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null);
+
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
   useEffect(() => {
@@ -69,21 +75,43 @@ const EditQuestions: React.FC = () => {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`${API_BASE_URL}/api/submissions?status=rejected,draft`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+        // Fetch rejected/draft SBA
+        const sbaRes = await fetch(`${API_BASE_URL}/api/submissions?status=rejected,draft`, {
+          credentials: 'include',
         });
-        if (!res.ok) throw new Error('Failed to fetch questions');
-        const data = await res.json();
-        setQuestions(Array.isArray(data) ? data : data.submissions || []);
+        // Fetch rejected/draft OSCE
+        const osceRes = await fetch(`${API_BASE_URL}/api/osce-stations?status=rejected,draft`, {
+          credentials: 'include',
+        });
+        if (!sbaRes.ok || !osceRes.ok) throw new Error('Failed to fetch questions');
+        const sba = await sbaRes.json();
+        const osce = await osceRes.json();
+        const sbaQs = (Array.isArray(sba) ? sba : sba.submissions || []).map((q: any) => ({ ...q, type: 'SBA' }));
+        const osceQs = (Array.isArray(osce) ? osce : osce.submissions || []).map((q: any) => ({ ...q, type: 'OSCE' }));
+        setQuestions([...sbaQs, ...osceQs]);
       } catch (err: any) {
         setError(err.message || 'Network error');
       }
       setLoading(false);
     };
-    if (jwt) fetchQuestions();
-  }, [jwt]);
+    if (isAuthenticated) fetchQuestions();
+  }, [isAuthenticated]);
 
   const startEdit = (q: any) => {
+    if (q.type === 'OSCE') {
+      if (osceEditId === q._id) {
+        setOsceEditId(null);
+        setOsceEditData(null);
+        return;
+      }
+      setOsceEditId(q._id);
+      setOsceEditData(q);
+      setEditingId(null);
+      setImagePreviews([]);
+      setFormImages(null);
+      return;
+    }
+    // SBA logic as before
     if (editingId === q._id) {
       setEditingId(null);
       setImagePreviews([]);
@@ -126,7 +154,7 @@ const EditQuestions: React.FC = () => {
         formData.append('status', data.status === 'draft' ? 'draft' : 'pending');
         const res = await fetch(`${API_BASE_URL}/api/submissions/${editingId}`, {
           method: 'PATCH',
-          headers: { Authorization: `Bearer ${jwt}` },
+          credentials: 'include',
           body: formData,
         });
         if (!res.ok) throw new Error('Failed to update question');
@@ -147,8 +175,8 @@ const EditQuestions: React.FC = () => {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${jwt}`,
           },
+          credentials: 'include',
           body: JSON.stringify(payload),
         });
         if (!res.ok) throw new Error('Failed to update question');
@@ -169,7 +197,7 @@ const EditQuestions: React.FC = () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${jwt}` },
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to delete question');
       setQuestions(prev => prev.filter(q => q._id !== id));
@@ -227,20 +255,20 @@ const EditQuestions: React.FC = () => {
                   <button
                     className="bg-primary text-white px-4 py-1.5 rounded font-semibold hover:bg-primary-dark transition"
                     onClick={() => startEdit(q)}
-                    disabled={!!editingId && editingId !== q._id}
+                    disabled={!!editingId && editingId !== q._id || !!osceEditId && osceEditId !== q._id}
                   >
                     {q.status === 'rejected' ? 'Edit & Resubmit' : 'Edit Draft'}
                   </button>
                   <button
                     className="bg-red-500 text-white px-4 py-1.5 rounded font-semibold hover:bg-red-600 transition"
                     onClick={() => handleDelete(q._id)}
-                    disabled={!!editingId}
+                    disabled={!!editingId || !!osceEditId}
                   >
                     Delete
                   </button>
                 </div>
               </div>
-              {editingId === q._id && (
+              {editingId === q._id && q.type !== 'OSCE' && (
                 <form onSubmit={handleSubmit(onSubmit)} className="mt-4 bg-white rounded-xl shadow-inner p-4 flex flex-col gap-4">
                   <div>
                     <label className="block mb-1 font-medium">Category</label>
@@ -435,8 +463,44 @@ const EditQuestions: React.FC = () => {
                   </div>
                 </form>
               )}
+              {osceEditId === q._id && q.type === 'OSCE' && (
+                <OsceStationForm
+                  mode="edit"
+                  initialData={osceEditData}
+                  onSubmit={async (data) => {
+                    try {
+                      const res = await fetch(`${API_BASE_URL}/api/osce-stations/${osceEditId}`, {
+                        method: 'PATCH',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify({ ...data, status: 'pending' }),
+                      });
+                      if (!res.ok) throw new Error('Failed to update OSCE station');
+                      setQuestions(prev => prev.filter(q => q._id !== osceEditId));
+                      setOsceEditId(null);
+                      setOsceEditData(null);
+                      setToast({ type: 'success', message: 'OSCE station resubmitted successfully!' });
+                      setTimeout(() => setToast(null), 2500);
+                    } catch (err: any) {
+                      setError(err.message || 'Network error');
+                    }
+                  }}
+                  onCancel={() => { setOsceEditId(null); setOsceEditData(null); }}
+                  saveLabel="Resubmit"
+                />
+              )}
             </div>
           ))}
+        </div>
+      )}
+      {/* Toast notification */}
+      {toast && (
+        <div className={`fixed top-6 right-6 z-[9999] px-6 py-3 rounded-lg shadow-lg text-white font-semibold transition-all duration-300
+          ${toast.type === 'success' ? 'bg-green-500' : toast.type === 'error' ? 'bg-red-500' : 'bg-blue-500'}`}
+        >
+          {toast.message}
         </div>
       )}
     </div>

@@ -119,6 +119,11 @@ const createPenalty = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 exports.createPenalty = createPenalty;
 const getWriters = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const user = req.user;
+        if (!user || user.role !== 'admin') {
+            res.status(403).json({ message: 'Forbidden' });
+            return;
+        }
         const writers = yield User_1.default.find({ role: 'writer' }).select('name email');
         res.json(writers);
     }

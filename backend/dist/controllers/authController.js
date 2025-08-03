@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.resetPassword = exports.forgotPassword = exports.updateProfile = exports.changePassword = exports.changeEmail = exports.verifyEmail = exports.login = exports.register = void 0;
+exports.logout = exports.resetPassword = exports.forgotPassword = exports.updateProfile = exports.changePassword = exports.changeEmail = exports.verifyEmail = exports.login = exports.register = void 0;
 const User_1 = __importDefault(require("../models/User"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -25,7 +25,8 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         // Step 2: Check if user exists
         const existingUser = yield User_1.default.findOne({ email });
         if (existingUser) {
-            res.status(400).json({ message: 'User already exists' });
+            // SECURITY FIX: Don't reveal if user exists, use generic message
+            res.status(400).json({ message: 'Registration failed. Please check your details and try again.' });
             return;
         }
         // Step 3: Generate email verification token
@@ -40,11 +41,8 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             verified: false,
             role: 'writer',
         });
-        // Log token and user
-        console.log('Generated token:', emailVerificationToken);
-        console.log('Saved user:', user);
-        // Log call to sendVerificationEmail
-        console.log('Calling sendVerificationEmail with:', email, emailVerificationToken);
+        // Log registration event without sensitive data
+        console.log('User registration initiated for email:', email.replace(/(.{2}).*(@.*)/, '$1***$2'));
         // Send verification email
         yield (0, email_1.sendVerificationEmail)(email, emailVerificationToken);
         res.status(201).json({ message: 'Verification email sent. Please check your inbox.' });
@@ -72,9 +70,15 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             res.status(400).json({ message: 'Invalid credentials' });
             return;
         }
-        const token = jsonwebtoken_1.default.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+        const token = jsonwebtoken_1.default.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
+        // Set httpOnly cookie instead of sending token in response body
+        res.cookie('jwt', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production', // HTTPS in production
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+        });
         res.json({
-            token,
             user: {
                 id: user._id,
                 name: user.name,
@@ -94,7 +98,7 @@ exports.login = login;
 const verifyEmail = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { token } = req.body;
-        console.log('Received token for verification:', token); // Debug log
+        console.log('Email verification attempt received'); // Debug log
         // 1. Accept token from req.body.token
         // 2. Check if token is present
         if (!token || typeof token !== 'string') {
@@ -104,7 +108,7 @@ const verifyEmail = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         // 3. Find user by emailVerificationToken
         const user = yield User_1.default.findOne({ emailVerificationToken: token });
         if (!user) {
-            console.log('No user found for token:', token); // Debug log
+            console.log('Invalid verification token provided'); // Debug log
             res.status(400).json({ message: 'Invalid or expired token.' });
             return;
         }
@@ -113,7 +117,7 @@ const verifyEmail = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             res.status(200).json({ message: 'Email already verified.' });
             return;
         }
-        console.log('User found for token:', user.email); // Debug log
+        console.log('Email verification successful for user:', user.email.replace(/(.{2}).*(@.*)/, '$1***$2')); // Debug log
         // 5. Set verified, clear token, save
         user.verified = true;
         user.emailVerificationToken = undefined;
@@ -140,7 +144,8 @@ const changeEmail = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         // Check if email is already in use
         const existing = yield User_1.default.findOne({ email: newEmail });
         if (existing) {
-            res.status(400).json({ message: 'Email is already in use.' });
+            // SECURITY FIX: Don't reveal if email exists, use generic message
+            res.status(400).json({ message: 'Email update failed. Please try a different email.' });
             return;
         }
         const user = yield User_1.default.findById(userId);
@@ -280,3 +285,13 @@ const resetPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.resetPassword = resetPassword;
+// Logout endpoint to clear httpOnly cookie
+const logout = (req, res) => {
+    res.clearCookie('jwt', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+    });
+    res.json({ message: 'Logged out successfully' });
+};
+exports.logout = logout;

@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth';
 import submissionsRoutes from './routes/submissions';
 import adminRoutes from './routes/admin';
@@ -24,7 +26,47 @@ app.use(
   })
 );
 app.use(express.json());
+app.use(cookieParser());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Rate limiting configurations
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 attempts per window per IP
+  message: {
+    error: 'Too many authentication attempts. Please try again in 15 minutes.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const strictAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per window per IP for sensitive operations
+  message: {
+    error: 'Too many failed attempts. Please try again in 15 minutes.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // 100 requests per window per IP
+  message: {
+    error: 'Too many requests. Please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply rate limiting
+app.use('/api/auth/login', strictAuthLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/forgot-password', strictAuthLimiter);
+app.use('/api/auth/reset-password', strictAuthLimiter);
+app.use('/api/auth', authLimiter);
+app.use('/api', generalLimiter);
 
 app.get('/', (req, res) => {
   res.send('MeduAid QB Portal Backend is running');

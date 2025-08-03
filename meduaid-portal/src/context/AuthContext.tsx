@@ -11,7 +11,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  jwt: string | null;
+  isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   signup: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
@@ -26,14 +26,11 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [jwt, setJwt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('jwt');
     const userData = localStorage.getItem('user');
-    if (token && userData) {
-      setJwt(token);
+    if (userData) {
       try {
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
@@ -41,7 +38,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error("Failed to parse user data from localStorage", error);
         setUser(null);
         localStorage.removeItem('user');
-        localStorage.removeItem('jwt');
       }
     }
     setLoading(false);
@@ -52,13 +48,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
       if (!response.ok) return false;
       const data = await response.json();
       setUser(data.user);
-      setJwt(data.token);
-      localStorage.setItem('jwt', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       return true;
     } catch {
@@ -71,13 +66,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ name: email.split('@')[0], email, password }),
       });
       if (!response.ok) return false;
       const data = await response.json();
       setUser(data.user);
-      setJwt(data.token);
-      localStorage.setItem('jwt', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       return true;
     } catch {
@@ -91,22 +85,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const verifiedUser = { ...user, isVerified: true };
       setUser(verifiedUser);
       localStorage.setItem('user', JSON.stringify(verifiedUser));
-      setJwt(jwt || '');
-      localStorage.setItem('jwt', jwt || '');
       return true;
     }
     return false;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      // Call backend logout to clear httpOnly cookie
+      await fetch(`${API_BASE_URL}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch (error) {
+      console.error('Logout request failed:', error);
+    }
+    
     setUser(null);
-    setJwt(null);
-    localStorage.removeItem('jwt');
     localStorage.removeItem('user');
   };
 
+  const isAuthenticated = !!user;
+
   return (
-    <AuthContext.Provider value={{ user, jwt, login, signup, logout, verifyEmail, loading, setUser }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, login, signup, logout, verifyEmail, loading, setUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -18,7 +18,7 @@ interface Writer {
 }
 
 const PenaltiesManagement: React.FC = () => {
-  const { user, jwt } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   
   const [writers, setWriters] = useState<Writer[]>([]);
@@ -53,7 +53,7 @@ const PenaltiesManagement: React.FC = () => {
       try {
         // Fetch writers
         const writersRes = await fetch(`${API_BASE_URL}/api/admin/writers`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+          credentials: 'include',
         });
         if (!writersRes.ok) throw new Error('Failed to fetch writers.');
         const writersData = await writersRes.json();
@@ -61,7 +61,7 @@ const PenaltiesManagement: React.FC = () => {
 
         // Fetch penalties
         const penaltiesRes = await fetch(`${API_BASE_URL}/api/admin/penalties`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+          credentials: 'include',
         });
         if (!penaltiesRes.ok) throw new Error('Failed to fetch penalties.');
         const penaltiesData = await penaltiesRes.json();
@@ -74,10 +74,10 @@ const PenaltiesManagement: React.FC = () => {
       }
     };
 
-    if (jwt) {
+    if (isAuthenticated) {
       fetchData();
     }
-  }, [user, navigate, jwt]);
+  }, [user, navigate, isAuthenticated]);
 
   const handleApplyPenalty = async () => {
     let hasError = false;
@@ -103,8 +103,8 @@ const PenaltiesManagement: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${jwt}`,
         },
+        credentials: 'include',
         body: JSON.stringify({
           writer: selectedWriter,
           reason,
@@ -132,7 +132,7 @@ const PenaltiesManagement: React.FC = () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/admin/penalties/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${jwt}` },
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to remove penalty.');
       setPenalties(penalties.filter(p => p._id !== id));

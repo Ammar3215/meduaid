@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 const Settings: React.FC = () => {
-  const { jwt, user, setUser } = useAuth();
+  const { isAuthenticated, user, setUser } = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -35,8 +35,8 @@ const Settings: React.FC = () => {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${jwt}`,
         },
+        credentials: 'include',
         body: JSON.stringify(userData),
       });
       const data = await response.json();
@@ -76,8 +76,8 @@ const Settings: React.FC = () => {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${jwt}`,
         },
+        credentials: 'include',
         body: JSON.stringify({ currentPassword, newPassword }),
       });
       if (!res.ok) {

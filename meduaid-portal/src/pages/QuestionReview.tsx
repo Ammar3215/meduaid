@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { subjectsStructure } from '../utils/subjectsStructure';
-import { FunnelIcon, BookOpenIcon, TagIcon, CheckCircleIcon, XCircleIcon, ClockIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { FunnelIcon, BookOpenIcon, TagIcon, CheckCircleIcon, XCircleIcon, ClockIcon, ChevronDownIcon, UserIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import ReactDOM from 'react-dom';
 import Skeleton from '../components/Skeleton';
 import OsceStationViewModal from '../components/OsceStationViewModal';
+import AdminEditQuestionForm from '../components/AdminEditQuestionForm';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
 const QuestionReview: React.FC = () => {
-  const { jwt } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [questions, setQuestions] = useState<any[]>([]); // pending only
   const [allQuestions, setAllQuestions] = useState<any[]>([]); // all-time stats
   const [editReasonId, setEditReasonId] = useState<string | null>(null);
@@ -36,6 +37,10 @@ const QuestionReview: React.FC = () => {
   const [selectedWriter, setSelectedWriter] = useState('All');
   const [selectedType, setSelectedType] = useState('All');
 
+  // Add pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const questionsPerPage = 12;
+
   useEffect(() => {
     const fetchQuestions = async () => {
       setLoading(true);
@@ -43,19 +48,19 @@ const QuestionReview: React.FC = () => {
       try {
         // Fetch pending SBA
         const pendingSbaRes = await fetch(`${API_BASE_URL}/api/submissions?status=pending`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+          credentials: 'include',
         });
         // Fetch pending OSCE
         const pendingOsceRes = await fetch(`${API_BASE_URL}/api/osce-stations?status=pending`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+          credentials: 'include',
         });
         // Fetch all SBA for stats
         const allSbaRes = await fetch(`${API_BASE_URL}/api/submissions`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+          credentials: 'include',
         });
         // Fetch all OSCE for stats
         const allOsceRes = await fetch(`${API_BASE_URL}/api/osce-stations`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+          credentials: 'include',
         });
         if (!pendingSbaRes.ok || !pendingOsceRes.ok || !allSbaRes.ok || !allOsceRes.ok) {
           setError('Failed to fetch questions');
@@ -66,15 +71,15 @@ const QuestionReview: React.FC = () => {
         const pendingOsce = (await pendingOsceRes.json()).map((q: any) => ({ ...q, type: 'OSCE' }));
         const allSba = await allSbaRes.json();
         const allOsce = (await allOsceRes.json()).map((q: any) => ({ ...q, type: 'OSCE' }));
-        setQuestions([...pendingSba, ...pendingOsce]);
-        setAllQuestions([...allSba, ...allOsce]);
+        setQuestions([...pendingSba.map((q: any) => ({ ...q, type: 'SBA' })), ...pendingOsce]);
+        setAllQuestions([...allSba.map((q: any) => ({ ...q, type: 'SBA' })), ...allOsce]);
       } catch {
         setError('Network error');
       }
       setLoading(false);
     };
-    if (jwt) fetchQuestions();
-  }, [jwt]);
+    if (isAuthenticated) fetchQuestions();
+  }, [isAuthenticated]);
 
   // Extract unique writers from allQuestions
   const writers = Array.from(new Set(allQuestions.map((q: any) => q.writer?.name).filter(Boolean)));
@@ -85,8 +90,8 @@ const QuestionReview: React.FC = () => {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${jwt}`,
         },
+        credentials: 'include',
         body: JSON.stringify({ status }),
       });
       if (response.ok) {
@@ -118,8 +123,8 @@ const QuestionReview: React.FC = () => {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${jwt}`,
         },
+        credentials: 'include',
         body: JSON.stringify({ status: 'rejected', rejectionReason }),
       });
       if (response.ok) {
@@ -142,6 +147,12 @@ const QuestionReview: React.FC = () => {
     (selectedWriter === 'All' || q.writer?.name === selectedWriter)
   ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
+  // Pagination logic
+  const totalPages = Math.ceil(filteredQuestions.length / questionsPerPage);
+  const startIndex = (currentPage - 1) * questionsPerPage;
+  const endIndex = startIndex + questionsPerPage;
+  const currentQuestions = filteredQuestions.slice(startIndex, endIndex);
+
   // Restore getInitials helper function
   function getInitials(name: string) {
     if (!name) return '?';
@@ -155,6 +166,11 @@ const QuestionReview: React.FC = () => {
     setSelectedWriter('All');
   }, [selectedCategory, selectedSubject, selectedTopic]);
 
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, selectedSubject, selectedTopic, selectedWriter, selectedType]);
+
   return (
     <>
       <div className="w-full max-w-full max-w-6xl mx-auto md:px-6">
@@ -167,65 +183,66 @@ const QuestionReview: React.FC = () => {
         )}
         {/* Removed Question Review header and subtext as requested */}
         {/* Enhanced Filters Section with Pending Counter */}
-        <div className="mb-8 relative">
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-2 md:p-6 flex flex-col md:flex-row flex-wrap gap-2 md:gap-6 items-stretch shadow-sm flex-1">
-              <div className="flex flex-col w-full mb-1 md:mb-0">
-                <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700 text-left">
-                  <TagIcon className="w-4 h-4 text-primary" /> Category
+        <div className="mb-8 relative pt-8">
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 md:p-4 flex flex-col md:flex-row flex-wrap gap-3 md:gap-4 items-center shadow-sm">
+            {/* Compact Filters */}
+            <div className="flex flex-col md:flex-row gap-3 md:gap-4 flex-1">
+              <div className="flex flex-col min-w-[120px]">
+                <label className="flex items-center gap-1 text-xs font-semibold mb-1 text-gray-700">
+                  <TagIcon className="w-3 h-3 text-primary" /> Category
                 </label>
-                <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900 w-full" value={selectedCategory} onChange={e => { setSelectedCategory(e.target.value); setSelectedSubject('All'); setSelectedTopic('All'); }}>
+                <select className="border rounded-lg px-2 py-1.5 focus:ring-primary focus:border-primary bg-white text-gray-900 text-sm" value={selectedCategory} onChange={e => { setSelectedCategory(e.target.value); setSelectedSubject('All'); setSelectedTopic('All'); }}>
                   {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
               </div>
-              <div className="flex flex-col w-full mb-1 md:mb-0">
-                <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700 text-left">
-                  <BookOpenIcon className="w-4 h-4 text-primary" /> Subject
+              <div className="flex flex-col min-w-[120px]">
+                <label className="flex items-center gap-1 text-xs font-semibold mb-1 text-gray-700">
+                  <BookOpenIcon className="w-3 h-3 text-primary" /> Subject
                 </label>
-                <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900 w-full" value={selectedSubject} onChange={e => { setSelectedSubject(e.target.value); setSelectedTopic('All'); }}>
+                <select className="border rounded-lg px-2 py-1.5 focus:ring-primary focus:border-primary bg-white text-gray-900 text-sm" value={selectedSubject} onChange={e => { setSelectedSubject(e.target.value); setSelectedTopic('All'); }}>
                   <option value="All">All</option>
                   {subjects.map(subj => <option key={subj} value={subj}>{subj}</option>)}
                 </select>
               </div>
-              <div className="flex flex-col w-full mb-1 md:mb-0">
-                <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700 text-left">
-                  <FunnelIcon className="w-4 h-4 text-primary" /> Topic
+              <div className="flex flex-col min-w-[120px]">
+                <label className="flex items-center gap-1 text-xs font-semibold mb-1 text-gray-700">
+                  <FunnelIcon className="w-3 h-3 text-primary" /> Topic
                 </label>
-                <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900 w-full" value={selectedTopic} onChange={e => setSelectedTopic(e.target.value)}>
+                <select className="border rounded-lg px-2 py-1.5 focus:ring-primary focus:border-primary bg-white text-gray-900 text-sm" value={selectedTopic} onChange={e => setSelectedTopic(e.target.value)}>
                   <option value="All">All</option>
                   {(topics as string[]).map((t: string) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
-                {/* Writer Filter */}
-                <div className="flex flex-col w-full mb-1 md:mb-0">
-                  <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700 text-left">
-                    <span className="w-4 h-4 inline-block bg-primary rounded-full mr-1" style={{background:'#4B47B6'}}></span> Writer
-                  </label>
-                  <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900 w-full" value={selectedWriter} onChange={e => setSelectedWriter(e.target.value)}>
-                    <option value="All">All</option>
-                    {writers.map(w => <option key={w} value={w}>{w}</option>)}
-                  </select>
-                </div>
-                {/* Type Filter */}
-                <div className="flex flex-col w-full mb-1 md:mb-0">
-                  <label className="flex items-center gap-1 text-sm font-semibold mb-1 text-gray-700 text-left">
-                    <span className="w-4 h-4 inline-block bg-primary rounded-full mr-1" style={{background:'#4B47B6'}}></span> Type
-                  </label>
-                  <select className="border rounded-lg px-3 py-2 focus:ring-primary focus:border-primary bg-white text-gray-900 w-full" value={selectedType} onChange={e => setSelectedType(e.target.value)}>
-                    <option value="All">All</option>
-                    <option value="SBA">SBA</option>
-                    <option value="OSCE">OSCE</option>
-                  </select>
-                </div>
+              <div className="flex flex-col min-w-[120px]">
+                <label className="flex items-center gap-1 text-xs font-semibold mb-1 text-gray-700">
+                  <UserIcon className="w-3 h-3 text-primary" /> Writer
+                </label>
+                <select className="border rounded-lg px-2 py-1.5 focus:ring-primary focus:border-primary bg-white text-gray-900 text-sm" value={selectedWriter} onChange={e => setSelectedWriter(e.target.value)}>
+                  <option value="All">All</option>
+                  {writers.map(w => <option key={w} value={w}>{w}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-col min-w-[100px]">
+                <label className="flex items-center gap-1 text-xs font-semibold mb-1 text-gray-700">
+                  <DocumentTextIcon className="w-3 h-3 text-primary" /> Type
+                </label>
+                <select className="border rounded-lg px-2 py-1.5 focus:ring-primary focus:border-primary bg-white text-gray-900 text-sm" value={selectedType} onChange={e => setSelectedType(e.target.value)}>
+                  <option value="All">All</option>
+                  <option value="SBA">SBA</option>
+                  <option value="OSCE">OSCE</option>
+                </select>
+              </div>
             </div>
-        </div>
-        {/* Pending Counter Card */}
-        <div className="mb-8 flex justify-center">
-          <div className="flex items-center gap-2 px-6 py-3 rounded-xl bg-yellow-50 border border-yellow-200 shadow text-yellow-800 font-semibold text-base">
-            <ClockIcon className="w-6 h-6 text-yellow-400" />
-            <span className="text-2xl font-bold">{filteredQuestions.length}</span>
-            <span className="ml-1">Pending{selectedWriter !== 'All' ? ` (${selectedWriter})` : ''}</span>
+            
+            {/* Pending Counter - moved beside filters */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-50 border border-blue-200 text-blue-700 font-medium text-xs whitespace-nowrap">
+              <ClockIcon className="w-4 h-4 text-blue-500" />
+              <span className="text-lg font-bold">{filteredQuestions.length}</span>
+              <span>Pending{selectedWriter !== 'All' ? ` (${selectedWriter})` : ''}</span>
+            </div>
           </div>
         </div>
+        
         <div className="bg-white rounded-xl shadow p-2 md:p-6 w-full">
           {loading ? (
             <div className="flex flex-col gap-4">
@@ -242,40 +259,193 @@ const QuestionReview: React.FC = () => {
               <div>No questions to review.</div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {filteredQuestions.map((q) => {
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {currentQuestions.map((q) => {
                 return (
-                  <div key={q._id} className="bg-white/90 rounded-2xl shadow-xl border border-gray-100 p-6 flex flex-col gap-2 transition-all duration-200 hover:shadow-2xl min-h-[180px] max-h-[240px] justify-between">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-200 text-blue-700 font-bold text-lg">
-                        {getInitials(q.writer?.name || '-')}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-gray-900 truncate">{q.writer?.name || '-'}</div>
-                        <div className="text-xs text-gray-500 truncate">{q.subject} / {q.topic}</div>
+                  <div key={q._id} className="group relative bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-gray-200 transition-all duration-300 overflow-hidden">
+                    {/* Header with writer info and status */}
+                    <div className="p-6 pb-4">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
+                              {getInitials(q.writer?.name || '-')}
+                            </div>
+                            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white border-2 border-white shadow-sm flex items-center justify-center">
+                              <div className={`w-2.5 h-2.5 rounded-full ${
+                                q.type === 'SBA' ? 'bg-purple-500' : 'bg-orange-500'
+                              }`}></div>
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-gray-900 text-sm leading-tight">{q.writer?.name || '-'}</h3>
+                            <p className="text-xs text-gray-500 mt-0.5">{q.subject} • {q.topic}</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                            q.type === 'SBA' 
+                              ? 'bg-purple-50 text-purple-700 border border-purple-200' 
+                              : 'bg-orange-50 text-orange-700 border border-orange-200'
+                          }`}>
+                            <div className={`w-2 h-2 rounded-full ${
+                              q.type === 'SBA' ? 'bg-purple-500' : 'bg-orange-500'
+                            }`}></div>
+                            {q.type}
+                          </span>
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                            q.status === 'approved' 
+                              ? 'bg-green-50 text-green-700 border border-green-200' 
+                              : q.status === 'rejected' 
+                              ? 'bg-red-50 text-red-700 border border-red-200' 
+                              : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                          }`}>
+                            {q.status === 'approved' ? (
+                              <CheckCircleIcon className="w-3 h-3" />
+                            ) : q.status === 'rejected' ? (
+                              <XCircleIcon className="w-3 h-3" />
+                            ) : (
+                              <ClockIcon className="w-3 h-3" />
+                            )}
+                            {q.status.charAt(0).toUpperCase() + q.status.slice(1)}
+                          </span>
+                        </div>
                       </div>
-                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${q.status === 'approved' ? 'bg-green-100 text-green-700' : q.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{q.status === 'approved' ? <CheckCircleIcon className="w-4 h-4" /> : q.status === 'rejected' ? <XCircleIcon className="w-4 h-4" /> : <ClockIcon className="w-4 h-4" />} {q.status}</span>
+                      
+                      {/* Question content */}
+                      <div className="space-y-3">
+                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                          <h4 className="font-medium text-gray-900 text-sm leading-relaxed line-clamp-3" title={q.type === 'OSCE' ? (q.title || '') : (q.question || '')}>
+                            {q.type === 'OSCE'
+                              ? (q.title ? (q.title.length > 150 ? q.title.slice(0, 150) + '...' : q.title) : '')
+                              : (q.question ? (q.question.length > 150 ? q.question.slice(0, 150) + '...' : q.question) : '')}
+                          </h4>
+                        </div>
+                        
+                        {/* Rejection reason if applicable */}
+                        {q.status === 'rejected' && q.rejectionReason && (
+                          <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                            <div className="flex items-start gap-2">
+                              <XCircleIcon className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                              <div className="text-xs text-red-700">
+                                <span className="font-medium">Rejection Reason:</span>
+                                <p className="mt-1 leading-relaxed">{q.rejectionReason}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="font-medium text-gray-800 truncate" title={q.type === 'OSCE' ? (q.title || '') : (q.question || '')}>
-                      {q.type === 'OSCE'
-                        ? (q.title ? (q.title.length > 120 ? q.title.slice(0, 120) + '...' : q.title) : '')
-                        : (q.question ? (q.question.length > 120 ? q.question.slice(0, 120) + '...' : q.question) : '')}
+                    
+                    {/* Footer with action button */}
+                    <div className="px-6 pb-6">
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs text-gray-400">
+                          {new Date(q.createdAt).toLocaleDateString()}
+                        </div>
+                        <button 
+                          onClick={() => setDetailsModal({ open: true, question: q })} 
+                          className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-xl font-medium text-sm hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm hover:shadow-md group-hover:scale-105"
+                        >
+                          <BookOpenIcon className="w-4 h-4" />
+                          Review
+                        </button>
+                      </div>
                     </div>
-                    {q.status === 'rejected' && (
-                      <div className="text-xs text-red-600 mt-1">Reason: {q.rejectionReason || '-'}</div>
-                    )}
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      <button onClick={() => setStatus(q._id, 'approved')} className="bg-green-500 text-white px-4 py-1.5 rounded font-semibold text-xs hover:bg-green-600 transition flex items-center gap-1"><CheckCircleIcon className="w-4 h-4" /> Approve</button>
-                      <button onClick={() => { setEditReasonId(q._id); setRejectionReason(q.rejectionReason || ''); setDetailsModal({ open: true, question: q }); }} className="bg-red-500 text-white px-4 py-1.5 rounded font-semibold text-xs hover:bg-red-600 transition flex items-center gap-1"><XCircleIcon className="w-4 h-4" /> Reject</button>
-                      <button onClick={() => setStatus(q._id, 'pending')} className="bg-yellow-500 text-white px-4 py-1.5 rounded font-semibold text-xs hover:bg-yellow-600 transition flex items-center gap-1"><ClockIcon className="w-4 h-4" /> Pending</button>
-                      <button onClick={() => setDetailsModal({ open: true, question: q })} className="bg-primary text-white px-4 py-1.5 rounded font-semibold text-xs hover:bg-primary-dark transition flex items-center gap-1 ml-auto"><BookOpenIcon className="w-4 h-4" /> View Details</button>
-                    </div>
+                    
+                    {/* Hover overlay effect */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
                   </div>
                 );
               })}
             </div>
           )}
         </div>
+        
+        {/* Pagination Controls */}
+        {filteredQuestions.length > questionsPerPage && (
+          <div className="flex justify-center items-center gap-2 mt-8">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-2 border rounded-lg bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            
+            <div className="flex gap-1">
+              {(() => {
+                const pages = [];
+                const maxVisiblePages = 7; // Show max 7 page numbers
+                
+                if (totalPages <= maxVisiblePages) {
+                  // If total pages is small, show all pages
+                  for (let i = 1; i <= totalPages; i++) {
+                    pages.push(i);
+                  }
+                } else {
+                  // If total pages is large, show smart pagination
+                  if (currentPage <= 4) {
+                    // Near the beginning: show 1, 2, 3, 4, 5, ..., last
+                    for (let i = 1; i <= 5; i++) {
+                      pages.push(i);
+                    }
+                    pages.push('...');
+                    pages.push(totalPages);
+                  } else if (currentPage >= totalPages - 3) {
+                    // Near the end: show 1, ..., last-4, last-3, last-2, last-1, last
+                    pages.push(1);
+                    pages.push('...');
+                    for (let i = totalPages - 4; i <= totalPages; i++) {
+                      pages.push(i);
+                    }
+                  } else {
+                    // In the middle: show 1, ..., current-1, current, current+1, ..., last
+                    pages.push(1);
+                    pages.push('...');
+                    pages.push(currentPage - 1);
+                    pages.push(currentPage);
+                    pages.push(currentPage + 1);
+                    pages.push('...');
+                    pages.push(totalPages);
+                  }
+                }
+                
+                return pages.map((page, index) => (
+                  <button
+                    key={index}
+                    onClick={() => typeof page === 'number' ? setCurrentPage(page) : null}
+                    disabled={typeof page !== 'number'}
+                    className={`px-3 py-2 border rounded-lg ${
+                      typeof page === 'number'
+                        ? currentPage === page
+                          ? 'bg-primary text-white border-primary'
+                          : 'bg-white text-gray-700 hover:bg-gray-50'
+                        : 'bg-white text-gray-400 cursor-default'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ));
+              })()}
+            </div>
+            
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-2 border rounded-lg bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        )}
+        
+        {/* Page Info */}
+        {filteredQuestions.length > 0 && (
+          <div className="text-center text-gray-600 mt-4">
+            Showing {startIndex + 1} to {Math.min(endIndex, filteredQuestions.length)} of {filteredQuestions.length} questions
+          </div>
+        )}
       </div>
       {fullImage && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black bg-opacity-90" onClick={() => setFullImage(null)}>
@@ -291,6 +461,7 @@ const QuestionReview: React.FC = () => {
             station={detailsModal.question}
             loading={false}
             error={''}
+            onAction={(type, message) => setToast({ type, message })}
           />
         ) : (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
@@ -390,75 +561,18 @@ const QuestionReview: React.FC = () => {
                   </div>
                 </>
               ) : (
-                <form className="space-y-4 text-left" onSubmit={async (e) => {
-                  e.preventDefault();
-                  // PATCH updated fields
-                  const res = await fetch(`${API_BASE_URL}/api/submissions/${editData._id}`, {
-                    method: 'PATCH',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      Authorization: `Bearer ${jwt}`,
-                    },
-                    body: JSON.stringify({
-                      question: editData.question,
-                      choices: editData.choices,
-                      explanations: editData.explanations,
-                      reference: editData.reference,
-                    }),
-                  });
-                  if (res.ok) {
-                    setToast({ message: 'Question updated successfully', type: 'success' });
-                    setTimeout(() => setToast(null), 2000);
+                <AdminEditQuestionForm
+                  submission={editData}
+                  onClose={() => { setIsEditing(false); setEditData(null); }}
+                  onSave={updated => {
+                    setQuestions(prev => prev.map(q => q._id === updated._id ? updated : q));
+                    setAllQuestions(prev => prev.map(q => q._id === updated._id ? updated : q));
                     setIsEditing(false);
                     setEditData(null);
                     setDetailsModal({ open: false, question: null });
-                  }
-                }}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <div className="mb-2"><span className="font-semibold">Writer:</span> {detailsModal.question.writer?.name || '-'}</div>
-                      <div className="mb-2"><span className="font-semibold">Subject:</span> {detailsModal.question.subject}</div>
-                      <div className="mb-2"><span className="font-semibold">Topic:</span> {detailsModal.question.topic}</div>
-                      {detailsModal.question.subtopic && (
-                        <div className="mb-2"><span className="font-semibold">Subtopic:</span> {detailsModal.question.subtopic}</div>
-                      )}
-                      <div className="mb-2"><span className="font-semibold">Reference:</span>
-                        <input className="w-full px-2 py-1 border rounded bg-white text-gray-900" value={editData.reference} onChange={e => setEditData((d: any) => ({ ...d, reference: e.target.value }))} />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mb-2">
-                    <span className="font-semibold">Question:</span>
-                    <textarea className="w-full mt-1 bg-gray-50 rounded p-3 border text-gray-800" value={editData.question} onChange={e => setEditData((d: any) => ({ ...d, question: e.target.value }))} />
-                  </div>
-                  <div>
-                    <span className="font-semibold">Choices & Explanations:</span>
-                    <table className="w-full mt-2 border rounded bg-gray-50">
-                      <thead>
-                        <tr>
-                          <th className="px-2 py-1 text-left font-semibold text-gray-700">Choice</th>
-                          <th className="px-2 py-1 text-left font-semibold text-gray-700">Explanation</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {editData.choices?.map((_: string, i: number) => (
-                          <tr key={i} className="border-t">
-                            <td className="px-2 py-1 align-top">
-                              <input className="w-full px-2 py-1 border rounded bg-white text-gray-900" value={editData.choices[i]} onChange={e => setEditData((d: any) => { const arr = [...d.choices]; arr[i] = e.target.value; return { ...d, choices: arr }; })} />
-                            </td>
-                            <td className="px-2 py-1 align-top">
-                              <input className="w-full px-2 py-1 border rounded bg-white text-gray-900" value={editData.explanations[i]} onChange={e => setEditData((d: any) => { const arr = [...d.explanations]; arr[i] = e.target.value; return { ...d, explanations: arr }; })} />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-4 justify-end">
-                    <button type="button" onClick={() => { setIsEditing(false); setEditData(null); }} className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-300 transition">Cancel</button>
-                    <button type="submit" className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-dark transition">Save</button>
-                  </div>
-                </form>
+                  }}
+                  jwt={jwt || ''}
+                />
               )}
               <div className="flex justify-end mt-6">
                 <button

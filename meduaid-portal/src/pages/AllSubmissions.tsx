@@ -4,6 +4,7 @@ import Skeleton from '../components/Skeleton';
 import { subjectsStructure } from '../utils/subjectsStructure';
 import { TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
 import OsceStationViewModal from '../components/OsceStationViewModal';
+import { useNavigate } from 'react-router-dom';
 
 interface Submission {
   _id: string;
@@ -87,7 +88,8 @@ function Tooltip({ children, text }: { children: React.ReactNode, text: string }
 }
 
 const AllSubmissions: React.FC = () => {
-  const { jwt } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const navigate = useNavigate();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -104,6 +106,13 @@ const AllSubmissions: React.FC = () => {
   const [dateTo, setDateTo] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
+
+  // Redirect admins to the admin version of this page
+  useEffect(() => {
+    if (user && user.role === 'admin') {
+      navigate('/admin/all-submissions', { replace: true });
+    }
+  }, [user, navigate]);
 
   const subjects = getSubjectsForCategory(categoryFilter);
   const topics = subjectFilter !== 'All' ? getTopicsForSubject(subjectFilter) : [];
@@ -134,22 +143,24 @@ const AllSubmissions: React.FC = () => {
       setError('');
       try {
         const sbaRes = await fetch(`${API_BASE_URL}/api/submissions`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+          credentials: 'include',
         });
         const osceRes = await fetch(`${API_BASE_URL}/api/osce-stations`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+          credentials: 'include',
         });
         if (!sbaRes.ok || !osceRes.ok) throw new Error('Failed to fetch submissions');
         const sba = (await sbaRes.json()).map((q: any) => ({ ...q, type: 'SBA' }));
         const osce = (await osceRes.json()).map((q: any) => ({ ...q, type: 'OSCE' }));
-        setSubmissions([...sba, ...osce].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        const allSubmissions = [...sba, ...osce].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        
+        setSubmissions(allSubmissions);
       } catch (err: any) {
         setError(err.message || 'Network error');
       }
       setLoading(false);
     };
     fetchSubmissions();
-  }, [jwt]);
+  }, [isAuthenticated, user]);
 
   // Handle View button click
   const handleViewClick = async (id: string, type?: string) => {
@@ -157,19 +168,27 @@ const AllSubmissions: React.FC = () => {
     setModalError('');
     setSelectedSubmission(null);
     setModalOpen(true);
+    
     try {
       let res;
       if (type === 'OSCE') {
         res = await fetch(`${API_BASE_URL}/api/osce-stations/${id}`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+          credentials: 'include',
         });
       } else {
         res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+          credentials: 'include',
         });
       }
+      
       if (!res.ok) {
-        setModalError('Failed to fetch submission.');
+        if (res.status === 403) {
+          setModalError('You do not have permission to view this submission. This may be because it belongs to another user.');
+        } else if (res.status === 404) {
+          setModalError('Submission not found.');
+        } else {
+          setModalError('Failed to fetch submission.');
+        }
         setModalLoading(false);
         return;
       }
@@ -187,7 +206,7 @@ const AllSubmissions: React.FC = () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${jwt}` },
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to delete question');
       setSubmissions(prev => prev.filter(q => q._id !== id));
@@ -345,7 +364,9 @@ const AllSubmissions: React.FC = () => {
             <tbody>
               {filteredSubmissions.map((sub) => (
                 <tr key={sub._id} className="border-b">
-                  <td className="py-2 px-4 border max-w-xs truncate" title={sub.question}>{sub.question}</td>
+                  <td className="py-2 px-4 border max-w-xs truncate" title={sub.type === 'OSCE' ? sub.title : sub.question}>
+                    {sub.type === 'OSCE' ? sub.title : sub.question}
+                  </td>
                   <td className="py-2 px-4 border">
                     <span className={`inline-block px-2 py-1 rounded text-xs font-bold
                       ${sub.status === 'approved' ? 'bg-green-100 text-green-700' :
@@ -399,8 +420,8 @@ const AllSubmissions: React.FC = () => {
         </div>
       )}
       {/* Modal for viewing submission */}
-      {modalOpen && selectedSubmission && (
-        selectedSubmission.type === 'OSCE' ? (
+      {modalOpen && (
+        selectedSubmission?.type === 'OSCE' ? (
           <OsceStationViewModal
             open={modalOpen}
             onClose={() => setModalOpen(false)}

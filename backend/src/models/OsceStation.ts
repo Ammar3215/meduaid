@@ -14,9 +14,10 @@ export interface IOsceStation extends Document {
     section: string;
     items: { desc: string; score: number }[];
   }[];
-  followUps: { question: string; answer: string }[];
+  followUps: { question: string; answers: string[] }[];
   images: string[];
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'draft' | 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -45,11 +46,12 @@ const OsceStationSchema = new Schema<IOsceStation>({
   followUps: [
     {
       question: { type: String, required: true },
-      answer: { type: String, required: true },
+      answers: { type: [String], required: true },
     },
   ],
   images: { type: [String], default: [] },
-  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  status: { type: String, enum: ['draft', 'pending', 'approved', 'rejected'], default: 'pending' },
+  rejectionReason: { type: String },
 }, { timestamps: true });
 
 export default mongoose.model<IOsceStation>('OsceStation', OsceStationSchema); 

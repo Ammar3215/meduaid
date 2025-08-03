@@ -12,7 +12,8 @@ export const register: RequestHandler = async (req, res) => {
     // Step 2: Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      res.status(400).json({ message: 'User already exists' });
+      // SECURITY FIX: Don't reveal if user exists, use generic message
+      res.status(400).json({ message: 'Registration failed. Please check your details and try again.' });
       return;
     }
     // Step 3: Generate email verification token
@@ -27,11 +28,8 @@ export const register: RequestHandler = async (req, res) => {
       verified: false,
       role: 'writer',
     });
-    // Log token and user
-    console.log('Generated token:', emailVerificationToken);
-    console.log('Saved user:', user);
-    // Log call to sendVerificationEmail
-    console.log('Calling sendVerificationEmail with:', email, emailVerificationToken);
+    // Log registration event without sensitive data
+    console.log('User registration initiated for email:', email.replace(/(.{2}).*(@.*)/, '$1***$2'));
     // Send verification email
     await sendVerificationEmail(email, emailVerificationToken);
     res.status(201).json({ message: 'Verification email sent. Please check your inbox.' });
@@ -58,9 +56,17 @@ export const login: RequestHandler = async (req, res) => {
       res.status(400).json({ message: 'Invalid credentials' });
       return;
     }
-    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET!, { expiresIn: '7d' });
+    
+    // Set httpOnly cookie instead of sending token in response body
+    res.cookie('jwt', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // HTTPS in production
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+    });
+    
     res.json({
-      token,
       user: {
         id: user._id,
         name: user.name,
@@ -79,7 +85,7 @@ export const login: RequestHandler = async (req, res) => {
 export const verifyEmail: RequestHandler = async (req, res) => {
   try {
     const { token } = req.body;
-    console.log('Received token for verification:', token); // Debug log
+    console.log('Email verification attempt received'); // Debug log
     // 1. Accept token from req.body.token
     // 2. Check if token is present
     if (!token || typeof token !== 'string') {
@@ -89,7 +95,7 @@ export const verifyEmail: RequestHandler = async (req, res) => {
     // 3. Find user by emailVerificationToken
     const user = await User.findOne({ emailVerificationToken: token });
     if (!user) {
-      console.log('No user found for token:', token); // Debug log
+      console.log('Invalid verification token provided'); // Debug log
       res.status(400).json({ message: 'Invalid or expired token.' });
       return;
     }
@@ -98,7 +104,7 @@ export const verifyEmail: RequestHandler = async (req, res) => {
       res.status(200).json({ message: 'Email already verified.' });
       return;
     }
-    console.log('User found for token:', user.email); // Debug log
+    console.log('Email verification successful for user:', user.email.replace(/(.{2}).*(@.*)/, '$1***$2')); // Debug log
     // 5. Set verified, clear token, save
     user.verified = true;
     user.emailVerificationToken = undefined;
@@ -124,7 +130,8 @@ export const changeEmail: RequestHandler = async (req, res) => {
     // Check if email is already in use
     const existing = await User.findOne({ email: newEmail });
     if (existing) {
-      res.status(400).json({ message: 'Email is already in use.' });
+      // SECURITY FIX: Don't reveal if email exists, use generic message
+      res.status(400).json({ message: 'Email update failed. Please try a different email.' });
       return;
     }
     const user = await User.findById(userId);
@@ -261,4 +268,14 @@ export const resetPassword: RequestHandler = async (req, res): Promise<void> => 
     res.status(500).json({ message: 'Server error' });
     return;
   }
+};
+
+// Logout endpoint to clear httpOnly cookie
+export const logout: RequestHandler = (req, res) => {
+  res.clearCookie('jwt', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+  });
+  res.json({ message: 'Logged out successfully' });
 }; 

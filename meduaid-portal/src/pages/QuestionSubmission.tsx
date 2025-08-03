@@ -33,7 +33,7 @@ const osceStationTypes = [
 ];
 
 const QuestionSubmission: React.FC = () => {
-  const { jwt } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -81,11 +81,11 @@ const QuestionSubmission: React.FC = () => {
   const [osceTopic, setOsceTopic] = useState('');
   const [osceSubtopic, setOsceSubtopic] = useState('');
   const [osceMarkItems, setOsceMarkItems] = useState<{ [section: string]: { desc: string; score: string }[] }>({});
-  // Update follow-ups to include answers
-  const [osceFollowUps, setOsceFollowUps] = useState<{ question: string; answer: string }[]>([
-    { question: '', answer: '' },
-    { question: '', answer: '' },
-    { question: '', answer: '' },
+  // Update follow-ups to include multiple answers
+  const [osceFollowUps, setOsceFollowUps] = useState<{ question: string; answers: string[] }[]>([
+    { question: '', answers: [''] },
+    { question: '', answers: [''] },
+    { question: '', answers: [''] },
   ]);
   const [osceImagePreviews, setOsceImagePreviews] = useState<string[]>([]);
   const [osceGuidelinesConfirmed, setOsceGuidelinesConfirmed] = useState(false);
@@ -134,6 +134,7 @@ const QuestionSubmission: React.FC = () => {
     Array.from(files).forEach(file => formData.append('images', file));
     const res = await fetch(`${API_BASE_URL}/api/submissions/upload`, {
       method: 'POST',
+      credentials: 'include',
       body: formData,
     });
     if (!res.ok) throw new Error('Image upload failed');
@@ -179,8 +180,8 @@ const QuestionSubmission: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${jwt}`,
         },
+        credentials: 'include',
         body: JSON.stringify(payload),
       });
       if (!response.ok) {
@@ -225,8 +226,8 @@ const QuestionSubmission: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${jwt}`,
         },
+        credentials: 'include',
         body: JSON.stringify(payload),
       });
       if (!response.ok) {
@@ -251,12 +252,24 @@ const QuestionSubmission: React.FC = () => {
   };
 
   // Add/Remove follow-up questions
-  const addFollowUp = () => setOsceFollowUps([...osceFollowUps, { question: '', answer: '' }]);
+  const addFollowUp = () => setOsceFollowUps([...osceFollowUps, { question: '', answers: [''] }]);
   const removeFollowUp = (idx: number) => {
     if (osceFollowUps.length > 3) setOsceFollowUps(osceFollowUps.filter((_, i) => i !== idx));
   };
-  const updateFollowUp = (idx: number, field: 'question' | 'answer', val: string) => {
+  const updateFollowUp = (idx: number, field: 'question' | 'answers', val: string | string[]) => {
     setOsceFollowUps(osceFollowUps.map((q, i) => i === idx ? { ...q, [field]: val } : q));
+  };
+  
+  // Add/Remove answers for a specific question
+  const addAnswer = (questionIdx: number) => {
+    setOsceFollowUps(osceFollowUps.map((q, i) => 
+      i === questionIdx ? { ...q, answers: [...q.answers, ''] } : q
+    ));
+  };
+  const removeAnswer = (questionIdx: number, answerIdx: number) => {
+    setOsceFollowUps(osceFollowUps.map((q, i) => 
+      i === questionIdx ? { ...q, answers: q.answers.filter((_, ai) => ai !== answerIdx) } : q
+    ));
   };
 
   // Add/Remove marking scheme sections
@@ -296,7 +309,7 @@ const QuestionSubmission: React.FC = () => {
   const validateOsce = () => {
     const errs: any = {};
     if (!osceTitle.trim()) errs.title = 'Station title is required.';
-    if (!osceCase.trim()) errs.case = 'Case description is required.';
+    if (!osceCase.trim()) errs.case = 'Candidate is required.';
     if (!osceCategory) errs.category = 'Category is required.';
     if (!osceSubject) errs.subject = 'Subject is required.';
     if (!osceTopic) errs.topic = 'Topic is required.';
@@ -307,10 +320,10 @@ const QuestionSubmission: React.FC = () => {
         }
       }
     }
-    if (osceFollowUps.filter(q => q.question.trim() && q.answer.trim()).length < 3) errs.followUps = 'At least 3 follow-up questions and answers are required.';
+    if (osceFollowUps.filter(q => q.question.trim() && q.answers.some(ans => ans.trim())).length < 3) errs.followUps = 'At least 3 follow-up questions and answers are required.';
     osceFollowUps.forEach((q, idx) => {
-      if (q.question.trim() && !q.answer.trim()) errs[`followup_answer_${idx}`] = 'Answer is required.';
-      if (!q.question.trim() && q.answer.trim()) errs[`followup_question_${idx}`] = 'Question is required.';
+      if (q.question.trim() && !q.answers.some(ans => ans.trim())) errs[`followup_answer_${idx}`] = 'Answer is required.';
+      if (!q.question.trim() && q.answers.some(ans => ans.trim())) errs[`followup_question_${idx}`] = 'Question is required.';
     });
     if (!osceGuidelinesConfirmed) errs.guidelines = 'You must confirm you have read and followed the guidelines.';
     setOsceErrors(errs);
@@ -344,7 +357,7 @@ const QuestionSubmission: React.FC = () => {
             items: (osceMarkItems[section] || []).map(i => ({ desc: i.desc, score: Number(i.score) }))
           }))
         ],
-        followUps: osceFollowUps.filter(q => q.question.trim() && q.answer.trim()),
+        followUps: osceFollowUps.filter(q => q.question.trim() && q.answers.some(ans => ans.trim())),
         images: osceImagePreviews, // (handle upload if needed)
         status: 'pending',
       };
@@ -352,8 +365,8 @@ const QuestionSubmission: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${jwt}`,
         },
+        credentials: 'include',
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('Failed to submit OSCE station');
@@ -368,7 +381,7 @@ const QuestionSubmission: React.FC = () => {
       setOsceSubtopic('');
       setOsceMarkItems({});
       setOsceCustomSections([]);
-      setOsceFollowUps([{ question: '', answer: '' }, { question: '', answer: '' }, { question: '', answer: '' }]);
+      setOsceFollowUps([{ question: '', answers: [''] }, { question: '', answers: [''] }, { question: '', answers: [''] }]);
       setOsceImagePreviews([]);
       setOsceGuidelinesConfirmed(false);
       setOsceErrors({});
@@ -405,7 +418,7 @@ const QuestionSubmission: React.FC = () => {
             items: (osceMarkItems[section] || []).map(i => ({ desc: i.desc, score: Number(i.score) }))
           }))
         ],
-        followUps: osceFollowUps.filter(q => q.question.trim() && q.answer.trim()),
+        followUps: osceFollowUps.filter(q => q.question.trim() && q.answers.some(ans => ans.trim())),
         images: osceImagePreviews, // (handle upload if needed)
         status: 'draft',
       };
@@ -413,8 +426,8 @@ const QuestionSubmission: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${jwt}`,
         },
+        credentials: 'include',
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('Failed to save draft');
@@ -683,14 +696,14 @@ const QuestionSubmission: React.FC = () => {
           </div>
           {/* Case Description Section */}
           <div className="bg-gray-50 rounded-xl p-6 shadow-sm mb-4">
-            <h3 className="text-lg font-bold mb-4 text-green-700">Case Description</h3>
+            <h3 className="text-lg font-bold mb-4 text-green-700">Candidate</h3>
             <textarea value={osceCase} onChange={e => setOsceCase(e.target.value)} className="w-full px-4 py-2 border rounded-lg min-h-[80px] bg-white text-gray-900" />
             {osceErrors.case && <p className="text-red-500 text-sm mt-1">{osceErrors.case}</p>}
           </div>
           {/* History Sections */}
           {osceType === 'history' && (
             <div className="bg-gray-50 rounded-xl p-6 shadow-sm mb-4">
-              <h3 className="text-lg font-bold mb-4 text-green-700">History Sections</h3>
+              <h3 className="text-lg font-bold mb-4 text-green-700">History Sections (Actor)</h3>
               <div className="space-y-4">
                 {historySectionKeys.map((key, idx) => (
                   <div key={key} className="border-l-4 border-blue-400 bg-blue-50 rounded-lg p-4 shadow-sm mb-2">
@@ -781,33 +794,52 @@ const QuestionSubmission: React.FC = () => {
           <div className="bg-gray-50 rounded-xl p-6 shadow-sm mb-4">
             <h3 className="text-lg font-bold mb-4 text-green-700">Follow-up Questions (min 3)</h3>
             {osceFollowUps.map((q, idx) => (
-              <div key={idx} className="flex flex-col sm:flex-row gap-2 mb-2 bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    value={q.question}
-                    onChange={e => updateFollowUp(idx, 'question', e.target.value)}
-                    className="w-full px-2 py-1 border rounded mb-1"
-                    placeholder={`Follow-up Question ${idx + 1}`}
-                  />
-                  {osceErrors[`followup_question_${idx}`] && <p className="text-red-500 text-xs mt-1">{osceErrors[`followup_question_${idx}`]}</p>}
+              <div key={idx} className="mb-4 bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <div className="flex flex-col sm:flex-row gap-2 mb-2">
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      value={q.question}
+                      onChange={e => updateFollowUp(idx, 'question', e.target.value)}
+                      className="w-full px-2 py-1 border rounded mb-1"
+                      placeholder={`Follow-up Question ${idx + 1}`}
+                    />
+                    {osceErrors[`followup_question_${idx}`] && <p className="text-red-500 text-xs mt-1">{osceErrors[`followup_question_${idx}`]}</p>}
+                  </div>
+                  {osceFollowUps.length > 3 && (
+                    <button type="button" onClick={() => removeFollowUp(idx)} className="text-red-500 self-center px-2 py-1 text-sm">Remove Question</button>
+                  )}
                 </div>
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    value={q.answer}
-                    onChange={e => updateFollowUp(idx, 'answer', e.target.value)}
-                    className="w-full px-2 py-1 border rounded mb-1"
-                    placeholder={`Answer ${idx + 1}`}
-                  />
-                  {osceErrors[`followup_answer_${idx}`] && <p className="text-red-500 text-xs mt-1">{osceErrors[`followup_answer_${idx}`]}</p>}
+                <div className="ml-4">
+                  <div className="text-sm font-medium text-gray-700 mb-2">Answers:</div>
+                  {q.answers.map((ans, aidx) => (
+                    <div key={aidx} className="flex gap-2 mb-2">
+                      <input
+                        type="text"
+                        value={ans}
+                        onChange={e => updateFollowUp(idx, 'answers', q.answers.map((a, i) => (i === aidx ? e.target.value : a)))}
+                        className="flex-1 px-2 py-1 border rounded"
+                        placeholder={`Answer ${idx + 1} (Option ${aidx + 1})`}
+                      />
+                      {q.answers.length > 1 && (
+                        <button 
+                          type="button" 
+                          onClick={() => removeAnswer(idx, aidx)} 
+                          className="text-red-500 px-2 py-1 text-sm"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {q.answers.length < 5 && (
+                    <button type="button" onClick={() => addAnswer(idx)} className="text-blue-600 text-sm">+ Add Answer</button>
+                  )}
                 </div>
-                {osceFollowUps.length > 3 && (
-                  <button type="button" onClick={() => removeFollowUp(idx)} className="text-red-500 self-center">Remove</button>
-                )}
+                {osceErrors[`followup_answer_${idx}`] && <p className="text-red-500 text-xs mt-1">{osceErrors[`followup_answer_${idx}`]}</p>}
               </div>
             ))}
-            <button type="button" onClick={addFollowUp} className="text-blue-600 text-sm">+ Add Follow-up Question</button>
+            <button type="button" onClick={addFollowUp} className="text-blue-600 text-sm">+ Add Follow-up/out of scope Question</button>
             {osceErrors.followUps && <p className="text-red-500 text-sm mt-1">{osceErrors.followUps}</p>}
           </div>
           {/* Images Section */}
@@ -839,8 +871,8 @@ const QuestionSubmission: React.FC = () => {
               <p className="text-red-500 text-xs mb-4">{osceErrors.guidelines}</p>
             )}
           </div>
-          {/* Sticky Submit Bar */}
-          <div className="sticky bottom-0 left-0 right-0 bg-white py-4 px-2 flex flex-col md:flex-row justify-end gap-2 md:gap-4 border-t z-20 rounded-b-xl shadow-lg">
+          {/* Submit Bar */}
+          <div className="bg-white py-4 px-2 flex flex-col md:flex-row justify-end gap-2 md:gap-4 border-t rounded-b-xl shadow-lg">
             <button
               type="button"
               className="w-full md:w-auto bg-gray-300 text-gray-700 text-xs py-1.5 md:text-sm md:py-2 px-4 md:px-6 rounded-lg font-semibold hover:bg-gray-400 transition"

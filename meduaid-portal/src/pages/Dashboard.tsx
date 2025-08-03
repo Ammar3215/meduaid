@@ -31,7 +31,7 @@ function RejectionReasonCell({ reason = '-' }) {
 }
 
 const Dashboard: React.FC = () => {
-  const { jwt, user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [stats, setStats] = useState<any>(null);
@@ -79,8 +79,10 @@ const Dashboard: React.FC = () => {
       setLoading(true);
       setError('');
       try {
-        const response = await fetch(`${API_BASE_URL}/api/writer/stats`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+        // Use appropriate endpoint based on user role
+        const endpoint = user?.isAdmin ? '/api/admin/stats' : '/api/writer/stats';
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+          credentials: 'include',
         });
         if (!response.ok) {
           setError('Failed to fetch stats');
@@ -97,8 +99,10 @@ const Dashboard: React.FC = () => {
     };
     const fetchPenalties = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/writer/penalties`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+        // Use appropriate endpoint based on user role
+        const endpoint = user?.isAdmin ? '/api/admin/penalties' : '/api/writer/penalties';
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+          credentials: 'include',
         });
         if (response.ok) {
           const data = await response.json();
@@ -106,11 +110,11 @@ const Dashboard: React.FC = () => {
         }
       } catch {}
     };
-    if (jwt) {
+    if (isAuthenticated && user) {
       fetchStats();
       fetchPenalties();
     }
-  }, [jwt, location]);
+  }, [isAuthenticated, location, user]);
 
   // Prepare data for counter
   const filteredQuestions = (stats?.recentSubmissions || []).filter((q: any) =>
@@ -135,11 +139,11 @@ const Dashboard: React.FC = () => {
       let res;
       if (type === 'OSCE') {
         res = await fetch(`${API_BASE_URL}/api/osce-stations/${id}`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+          credentials: 'include',
         });
       } else {
         res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+          credentials: 'include',
         });
       }
       if (!res.ok) {

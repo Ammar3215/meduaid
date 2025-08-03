@@ -15,7 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendVerificationEmail = sendVerificationEmail;
 exports.sendPasswordResetEmail = sendPasswordResetEmail;
 const nodemailer_1 = __importDefault(require("nodemailer"));
-console.log('Loaded Gmail credentials:', process.env.GMAIL_USER, process.env.GMAIL_PASS ? '✅' : '❌');
+console.log('Email service initialized:', process.env.GMAIL_USER ? '✅' : '❌');
 const transporter = nodemailer_1.default.createTransport({
     service: 'gmail',
     auth: {
@@ -26,11 +26,8 @@ const transporter = nodemailer_1.default.createTransport({
 const frontendBaseUrl = process.env.FRONTEND_BASE_URL || 'http://localhost:5173';
 function sendVerificationEmail(to, token) {
     return __awaiter(this, void 0, void 0, function* () {
-        console.log('sendVerificationEmail called with:');
-        console.log('To:', to);
-        console.log('Token:', token);
+        console.log('Sending verification email to:', to.replace(/(.{2}).*(@.*)/, '$1***$2'));
         const verificationUrl = `${frontendBaseUrl}/verify-email?token=${token}`;
-        console.log('Verification link:', verificationUrl);
         const info = yield transporter.sendMail({
             from: 'no-reply@meduaid.com',
             to,
@@ -44,6 +41,7 @@ function sendVerificationEmail(to, token) {
 }
 function sendPasswordResetEmail(to, token) {
     return __awaiter(this, void 0, void 0, function* () {
+        console.log('Sending password reset email to:', to.replace(/(.{2}).*(@.*)/, '$1***$2'));
         const resetUrl = `${frontendBaseUrl}/reset-password?token=${token}`;
         const info = yield transporter.sendMail({
             from: 'no-reply@meduaid.com',

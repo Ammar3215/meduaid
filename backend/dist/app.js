@@ -5,6 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
+const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
+const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const auth_1 = __importDefault(require("./routes/auth"));
 const submissions_1 = __importDefault(require("./routes/submissions"));
 const admin_1 = __importDefault(require("./routes/admin"));
@@ -25,7 +27,43 @@ app.use((0, cors_1.default)({
     credentials: true,
 }));
 app.use(express_1.default.json());
+app.use((0, cookie_parser_1.default)());
 app.use('/uploads', express_1.default.static(path_1.default.join(__dirname, '../uploads')));
+// Rate limiting configurations
+const authLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // 10 attempts per window per IP
+    message: {
+        error: 'Too many authentication attempts. Please try again in 15 minutes.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+const strictAuthLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // 5 attempts per window per IP for sensitive operations
+    message: {
+        error: 'Too many failed attempts. Please try again in 15 minutes.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+const generalLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // 100 requests per window per IP
+    message: {
+        error: 'Too many requests. Please try again later.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+// Apply rate limiting
+app.use('/api/auth/login', strictAuthLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/forgot-password', strictAuthLimiter);
+app.use('/api/auth/reset-password', strictAuthLimiter);
+app.use('/api/auth', authLimiter);
+app.use('/api', generalLimiter);
 app.get('/', (req, res) => {
     res.send('MeduAid QB Portal Backend is running');
 });

@@ -11,7 +11,7 @@ type EditFormInputs = {
 };
 
 const EditQuestions: React.FC = () => {
-  const { jwt } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [rejected, setRejected] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -42,7 +42,7 @@ const EditQuestions: React.FC = () => {
       setError('');
       try {
         const res = await fetch(`${API_BASE_URL}/api/submissions?status=rejected`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+          credentials: 'include',
         });
         if (!res.ok) throw new Error('Failed to fetch rejected questions');
         const data = await res.json();
@@ -52,8 +52,8 @@ const EditQuestions: React.FC = () => {
       }
       setLoading(false);
     };
-    if (jwt) fetchRejected();
-  }, [jwt]);
+    if (isAuthenticated) fetchRejected();
+  }, [isAuthenticated]);
 
   const startEdit = (q: any) => {
     if (editingId === q._id) {
@@ -102,7 +102,7 @@ const EditQuestions: React.FC = () => {
         formData.append('status', 'pending');
         const res = await fetch(`${API_BASE_URL}/api/submissions/${editingId}`, {
           method: 'PATCH',
-          headers: { Authorization: `Bearer ${jwt}` },
+          credentials: 'include',
           body: formData,
         });
         if (!res.ok) throw new Error('Failed to resubmit question');
@@ -112,8 +112,8 @@ const EditQuestions: React.FC = () => {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${jwt}`,
           },
+          credentials: 'include',
           body: JSON.stringify({
             question: data.question,
             choices: data.choices,
