@@ -11,6 +11,11 @@ import path from 'path';
 
 const app = express();
 
+// Trust proxy for Render deployment
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 app.use(
   cors({
     origin: [
