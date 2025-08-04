@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import Skeleton from '../components/Skeleton';
 import { subjectsStructure } from '../utils/subjectsStructure';
 import OsceStationForm from '../components/OsceStationForm';
+import { API_BASE_URL } from '../config/api';
 
 type EditFormInputs = {
   question: string;
@@ -68,7 +69,6 @@ const EditQuestions: React.FC = () => {
 
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null);
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
   useEffect(() => {
     const fetchQuestions = async () => {

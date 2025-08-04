@@ -14,7 +14,8 @@ export interface IOsceStation extends Document {
     section: string;
     items: { desc: string; score: number }[];
   }[];
-  followUps: { question: string; answers: string[] }[];
+  followUps: { question: string; answers: string[]; score: number }[];
+  totalMarks: number;
   images: string[];
   status: 'draft' | 'pending' | 'approved' | 'rejected';
   rejectionReason?: string;
@@ -47,8 +48,10 @@ const OsceStationSchema = new Schema<IOsceStation>({
     {
       question: { type: String, required: true },
       answers: { type: [String], required: true },
+      score: { type: Number, required: true },
     },
   ],
+  totalMarks: { type: Number, required: true },
   images: { type: [String], default: [] },
   status: { type: String, enum: ['draft', 'pending', 'approved', 'rejected'], default: 'pending' },
   rejectionReason: { type: String },

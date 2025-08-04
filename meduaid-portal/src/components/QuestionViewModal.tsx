@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckCircleIcon } from '@heroicons/react/24/solid';
+import { API_BASE_URL } from '../config/api';
 
 interface QuestionViewModalProps {
   open: boolean;
@@ -9,8 +10,6 @@ interface QuestionViewModalProps {
   error?: string;
   children?: React.ReactNode;
 }
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
 const QuestionViewModal: React.FC<QuestionViewModalProps> = ({ open, onClose, question, loading, error, children }) => {
   if (!open) return null;

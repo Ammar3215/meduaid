@@ -5,6 +5,7 @@ import { subjectsStructure } from '../utils/subjectsStructure';
 import { TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
 import OsceStationViewModal from '../components/OsceStationViewModal';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config/api';
 
 interface Submission {
   _id: string;
@@ -23,7 +24,6 @@ interface Submission {
   type?: string; // Added type for OSCEs
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
 const statusOptions = ['All', 'approved', 'pending', 'rejected', 'draft'];
 
@@ -201,17 +201,25 @@ const AllSubmissions: React.FC = () => {
     setModalLoading(false);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this question? This action cannot be undone.')) return;
+  const handleDelete = async (id: string, type?: string) => {
+    const itemType = type === 'OSCE' ? 'OSCE station' : 'question';
+    if (!window.confirm(`Are you sure you want to delete this ${itemType}? This action cannot be undone.`)) return;
     setError('');
     try {
-      const res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
+      let endpoint;
+      if (type === 'OSCE') {
+        endpoint = `${API_BASE_URL}/api/osce-stations/${id}`;
+      } else {
+        endpoint = `${API_BASE_URL}/api/submissions/${id}`;
+      }
+      
+      const res = await fetch(endpoint, {
         method: 'DELETE',
         credentials: 'include',
       });
-      if (!res.ok) throw new Error('Failed to delete question');
+      if (!res.ok) throw new Error(`Failed to delete ${itemType}`);
       setSubmissions(prev => prev.filter(q => q._id !== id));
-      setSuccessMessage('Question deleted successfully');
+      setSuccessMessage(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} deleted successfully`);
       setTimeout(() => setSuccessMessage(''), 2000);
     } catch (err: any) {
       setError(err.message || 'Network error');
@@ -359,6 +367,7 @@ const AllSubmissions: React.FC = () => {
                 <th className="py-2 px-4 border">Submitted At</th>
                 <th className="py-2 px-4 border">Last Updated</th>
                 <th className="py-2 px-4 border">Type</th>
+                <th className="py-2 px-4 border">Total Marks</th>
                 <th className="py-2 px-4 border">Actions</th>
               </tr>
             </thead>
@@ -385,6 +394,13 @@ const AllSubmissions: React.FC = () => {
                   <td className="py-2 px-4 border">
                     <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${sub.type === 'OSCE' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>{sub.type}</span>
                   </td>
+                  <td className="py-2 px-4 border text-center">
+                    {sub.type === 'OSCE' ? (
+                      <span className="inline-block px-2 py-1 rounded text-xs font-bold bg-blue-100 text-blue-700">
+                        {(sub as any).totalMarks || 0} pts
+                      </span>
+                    ) : '-'}
+                  </td>
                   <td className="py-2 px-4 border flex gap-2 justify-end items-center">
                     <Tooltip text="View Submission">
                       <button
@@ -402,7 +418,7 @@ const AllSubmissions: React.FC = () => {
                           className="inline-flex items-center justify-center bg-gray-100 border border-gray-300 text-red-500 rounded-full p-2 hover:bg-red-500 hover:text-white hover:border-red-500 transition focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
                           aria-label="Delete submission"
                           type="button"
-                          onClick={() => handleDelete(sub._id)}
+                          onClick={() => handleDelete(sub._id, sub.type)}
                         >
                           <TrashIcon className="w-5 h-5" />
                         </button>
@@ -429,6 +445,19 @@ const AllSubmissions: React.FC = () => {
             station={selectedSubmission}
             loading={modalLoading}
             error={modalError}
+            user={user}
+            onAction={(type, message, itemId) => {
+              if (type === 'delete' && itemId) {
+                // Remove deleted item from submissions list
+                setSubmissions(prev => prev.filter(q => q._id !== itemId));
+                setModalOpen(false);
+                setSuccessMessage(message);
+                setTimeout(() => setSuccessMessage(''), 3000);
+              } else if (type === 'error') {
+                setError(message);
+                setTimeout(() => setError(''), 3000);
+              }
+            }}
           />
         ) : (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">

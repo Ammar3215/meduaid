@@ -72,7 +72,7 @@ const getRecentPenalties = (req, res) => __awaiter(void 0, void 0, void 0, funct
 });
 exports.getRecentPenalties = getRecentPenalties;
 const createPenalty = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('POST /api/admin/penalties', req.body);
+    // POST /api/admin/penalties request received
     try {
         const user = req.user;
         if (!user || user.role !== 'admin') {
@@ -112,7 +112,7 @@ const createPenalty = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         res.status(201).json(populatedPenalty);
     }
     catch (err) {
-        console.error('Error in createPenalty:', err);
+        // Error in createPenalty occurred
         res.status(500).json({ message: 'Server error' });
     }
 });

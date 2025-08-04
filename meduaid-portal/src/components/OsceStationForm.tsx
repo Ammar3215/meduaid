@@ -16,20 +16,34 @@ const osceStationTypes = [
   { value: 'examination', label: 'Clinical Examination' },
 ];
 
+// Default sections for different OSCE types
 const historySectionKeys = [
+  'Introduction',
   'Presenting Complaint',
-  'History of Presenting Complaint',
-  'Past Medical History',
-  'Drug History',
-  'Family History',
+  'Past Medical and Surgical History',
   'Social History',
-  'Systemic Enquiry',
+  'ICE (Ideas, Concerns, Expectations)',
+  'Summary and Closure',
 ];
 
-const getDefaultSections = (type: string) =>
-  type === 'history'
-    ? historySectionKeys
-    : ['General Examination', 'Specific Examination'];
+const examSections = [
+  'Introduction and Consent',
+  'Inspection and Observation',
+  'Palpation / Percussion / Auscultation',
+  'Functional Assessment / Special Tests',
+  'Summary of Findings and Explanation to Patient',
+];
+
+const getDefaultSections = (type: string, hasHistorySections?: boolean) => {
+  // Handle backward compatibility for "OSCE" type
+  if (type === 'OSCE') {
+    // If it has historySections data, it's a History OSCE
+    // If no historySections data, it's an Examination OSCE
+    return hasHistorySections ? historySectionKeys : examSections;
+  }
+  // Handle standard types
+  return type === 'history' ? historySectionKeys : examSections;
+};
 
 const OsceStationForm: React.FC<OsceStationFormProps> = ({ mode, initialData, onSubmit, onCancel, loading, error, saveLabel }) => {
   // State setup
@@ -41,11 +55,24 @@ const OsceStationForm: React.FC<OsceStationFormProps> = ({ mode, initialData, on
   const [osceSubtopic, setOsceSubtopic] = useState(initialData?.subtopic || '');
   const [osceCase, setOsceCase] = useState(initialData?.caseDescription || '');
   const [osceHistorySections, setOsceHistorySections] = useState<any>(initialData?.historySections || {});
+  
   const [osceMarkItems, setOsceMarkItems] = useState<any>(() => {
     if (initialData?.markingScheme) {
       const items: any = {};
+      // Get valid sections for the current OSCE type
+      const actualType = initialData.type || 'history';
+      const hasHistorySections = initialData.historySections && Object.keys(initialData.historySections).length > 0;
+      const validSections = getDefaultSections(actualType, hasHistorySections);
+      
       initialData.markingScheme.forEach((section: any) => {
-        items[section.section] = section.items;
+        // Only include sections that match the current OSCE type OR are custom sections
+        const historyDefaults = getDefaultSections('history');
+        const examDefaults = getDefaultSections('examination');
+        const isCustomSection = !historyDefaults.includes(section.section) && !examDefaults.includes(section.section);
+        
+        if (validSections.includes(section.section) || isCustomSection) {
+          items[section.section] = section.items;
+        }
       });
       return items;
     }
@@ -53,26 +80,51 @@ const OsceStationForm: React.FC<OsceStationFormProps> = ({ mode, initialData, on
   });
   const [osceCustomSections, setOsceCustomSections] = useState<string[]>(() => {
     if (initialData?.markingScheme) {
+      const hasHistorySections = initialData.historySections && Object.keys(initialData.historySections).length > 0;
+      const defaultSections = getDefaultSections(initialData.type || 'history', hasHistorySections);
       return initialData.markingScheme
-        .filter((section: any) => !getDefaultSections(initialData.type || 'history').includes(section.section))
+        .filter((section: any) => !defaultSections.includes(section.section))
         .map((section: any) => section.section);
     }
     return [];
   });
-  const [osceFollowUps, setOsceFollowUps] = useState<{ question: string; answers: string[] }[]>(() => {
-    if (initialData?.followUps) {
-      // Handle migration from old format to new format
-      return initialData.followUps.map((fu: any) => {
-        if (fu.answers) {
-          return fu; // Already in new format
-        } else if (fu.answer) {
-          return { question: fu.question, answers: [fu.answer] }; // Migrate from old format
-        } else {
-          return { question: fu.question, answers: [''] };
+  const [osceFollowUps, setOsceFollowUps] = useState<{ question: string; answers: string[]; score: string }[]>(() => {
+    if (initialData?.followUps && Array.isArray(initialData.followUps)) {
+      // Handle migration from old format to new format with comprehensive validation
+      const processedFollowUps = initialData.followUps.map((fu: any) => {
+        const question = fu.question || '';
+        let answers: string[] = [];
+        let score = '';
+
+        // Handle different answer formats
+        if (Array.isArray(fu.answers)) {
+          answers = fu.answers.filter((ans: any) => typeof ans === 'string' && ans.trim());
+        } else if (typeof fu.answer === 'string') {
+          // Legacy single answer format
+          answers = [fu.answer];
         }
+        
+        // Ensure at least one empty answer if none exist
+        if (answers.length === 0) {
+          answers = [''];
+        }
+
+        // Handle score conversion
+        if (fu.score !== undefined && fu.score !== null) {
+          score = fu.score.toString();
+        }
+
+        return { question, answers, score };
       });
+
+      // Ensure we have at least 3 follow-up questions
+      while (processedFollowUps.length < 3) {
+        processedFollowUps.push({ question: '', answers: [''], score: '' });
+      }
+
+      return processedFollowUps;
     }
-    return [{ question: '', answers: [''] }, { question: '', answers: [''] }, { question: '', answers: [''] }];
+    return [{ question: '', answers: [''], score: '' }, { question: '', answers: [''], score: '' }, { question: '', answers: [''], score: '' }];
   });
   const [osceImagePreviews, setOsceImagePreviews] = useState<string[]>(initialData?.images || []);
   const [osceErrors, setOsceErrors] = useState<any>({});
@@ -91,8 +143,19 @@ const OsceStationForm: React.FC<OsceStationFormProps> = ({ mode, initialData, on
       setOsceMarkItems(() => {
         if (initialData.markingScheme) {
           const items: any = {};
+          // Get valid sections for the current OSCE type
+          const hasHistorySections = initialData.historySections && Object.keys(initialData.historySections).length > 0;
+          const validSections = getDefaultSections(initialData.type || 'history', hasHistorySections);
+          
           initialData.markingScheme.forEach((section: any) => {
-            items[section.section] = section.items;
+            // Only include sections that match the current OSCE type OR are custom sections
+            const historyDefaults = getDefaultSections('history');
+            const examDefaults = getDefaultSections('examination');
+            const isCustomSection = !historyDefaults.includes(section.section) && !examDefaults.includes(section.section);
+            
+            if (validSections.includes(section.section) || isCustomSection) {
+              items[section.section] = section.items;
+            }
           });
           return items;
         }
@@ -100,25 +163,51 @@ const OsceStationForm: React.FC<OsceStationFormProps> = ({ mode, initialData, on
       });
       setOsceCustomSections(() => {
         if (initialData.markingScheme) {
+          const hasHistorySections = initialData.historySections && Object.keys(initialData.historySections).length > 0;
+          const defaultSections = getDefaultSections(initialData.type || 'history', hasHistorySections);
           return initialData.markingScheme
-            .filter((section: any) => !getDefaultSections(initialData.type || 'history').includes(section.section))
+            .filter((section: any) => !defaultSections.includes(section.section))
             .map((section: any) => section.section);
         }
         return [];
       });
       setOsceFollowUps(() => {
-        if (initialData.followUps) {
-          return initialData.followUps.map((fu: any) => {
-            if (fu.answers) {
-              return fu;
-            } else if (fu.answer) {
-              return { question: fu.question, answers: [fu.answer] };
-            } else {
-              return { question: fu.question, answers: [''] };
+        if (initialData.followUps && Array.isArray(initialData.followUps)) {
+          // Handle migration from old format to new format with comprehensive validation
+          const processedFollowUps = initialData.followUps.map((fu: any) => {
+            const question = fu.question || '';
+            let answers: string[] = [];
+            let score = '';
+
+            // Handle different answer formats
+            if (Array.isArray(fu.answers)) {
+              answers = fu.answers.filter((ans: any) => typeof ans === 'string' && ans.trim());
+            } else if (typeof fu.answer === 'string') {
+              // Legacy single answer format
+              answers = [fu.answer];
             }
+            
+            // Ensure at least one empty answer if none exist
+            if (answers.length === 0) {
+              answers = [''];
+            }
+
+            // Handle score conversion
+            if (fu.score !== undefined && fu.score !== null) {
+              score = fu.score.toString();
+            }
+
+            return { question, answers, score };
           });
+
+          // Ensure we have at least 3 follow-up questions
+          while (processedFollowUps.length < 3) {
+            processedFollowUps.push({ question: '', answers: [''], score: '' });
+          }
+
+          return processedFollowUps;
         }
-        return [{ question: '', answers: [''] }, { question: '', answers: [''] }, { question: '', answers: [''] }];
+        return [{ question: '', answers: [''], score: '' }, { question: '', answers: [''], score: '' }, { question: '', answers: [''], score: '' }];
       });
       setOsceImagePreviews(initialData.images || []);
     }
@@ -139,9 +228,9 @@ const OsceStationForm: React.FC<OsceStationFormProps> = ({ mode, initialData, on
   const addMarkItem = (section: string) => setOsceMarkItems((items: any) => ({ ...items, [section]: [...(items[section] || []), { desc: '', score: '' }] }));
   const updateMarkItem = (section: string, idx: number, field: 'desc' | 'score', val: string) => setOsceMarkItems((items: any) => ({ ...items, [section]: items[section].map((item: any, i: number) => i === idx ? { ...item, [field]: val } : item) }));
   const removeMarkItem = (section: string, idx: number) => setOsceMarkItems((items: any) => ({ ...items, [section]: items[section].filter((_: any, i: number) => i !== idx) }));
-  const addFollowUp = () => setOsceFollowUps([...osceFollowUps, { question: '', answers: [''] }]);
+  const addFollowUp = () => setOsceFollowUps([...osceFollowUps, { question: '', answers: [''], score: '' }]);
   const removeFollowUp = (idx: number) => setOsceFollowUps(fqs => fqs.filter((_, i) => i !== idx));
-  const updateFollowUp = (idx: number, field: 'question' | 'answers', val: string | string[]) => setOsceFollowUps(fqs => fqs.map((fq, i) => i === idx ? { ...fq, [field]: val } : fq));
+  const updateFollowUp = (idx: number, field: 'question' | 'answers' | 'score', val: string | string[]) => setOsceFollowUps(fqs => fqs.map((fq, i) => i === idx ? { ...fq, [field]: val } : fq));
   
   // Add/Remove answers for a specific question
   const addAnswer = (questionIdx: number) => {
@@ -174,7 +263,7 @@ const OsceStationForm: React.FC<OsceStationFormProps> = ({ mode, initialData, on
     if (!osceCategory) errs.category = 'Category is required.';
     if (!osceSubject) errs.subject = 'Subject is required.';
     if (!osceTopic) errs.topic = 'Topic is required.';
-    if (osceType === 'history') {
+    if (osceType === 'history' || (osceType === 'OSCE' && osceHistorySections && Object.keys(osceHistorySections).length > 0)) {
       for (const key of historySectionKeys) {
         if (!osceHistorySections[key] || !osceHistorySections[key].trim()) {
           errs[`history_${key}`] = `${key} is required.`;
@@ -185,9 +274,38 @@ const OsceStationForm: React.FC<OsceStationFormProps> = ({ mode, initialData, on
     osceFollowUps.forEach((q, idx) => {
       if (q.question.trim() && !q.answers.some(a => a.trim())) errs[`followup_answer_${idx}`] = 'Answer is required.';
       if (!q.question.trim() && q.answers.some(a => a.trim())) errs[`followup_question_${idx}`] = 'Question is required.';
+      if (q.question.trim() && q.answers.some(a => a.trim()) && (!q.score || !q.score.trim())) errs[`followup_score_${idx}`] = 'Score is required.';
     });
     setOsceErrors(errs);
     return Object.keys(errs).length === 0;
+  };
+
+  // Calculate total marks from marking scheme
+  const calculateTotalMarks = () => {
+    let total = 0;
+    // Sum marks from default sections
+    const hasHistorySections = osceHistorySections && Object.keys(osceHistorySections).length > 0;
+    getDefaultSections(osceType, hasHistorySections).forEach(section => {
+      const items = osceMarkItems[section] || [];
+      items.forEach((item: any) => {
+        const score = parseFloat(item.score) || 0;
+        total += score;
+      });
+    });
+    // Sum marks from custom sections
+    osceCustomSections.forEach(section => {
+      const items = osceMarkItems[section] || [];
+      items.forEach((item: any) => {
+        const score = parseFloat(item.score) || 0;
+        total += score;
+      });
+    });
+    // Sum marks from follow-up questions
+    osceFollowUps.forEach(q => {
+      const score = parseFloat(q.score) || 0;
+      total += score;
+    });
+    return total;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -201,9 +319,9 @@ const OsceStationForm: React.FC<OsceStationFormProps> = ({ mode, initialData, on
       title: osceTitle,
       type: osceType,
       caseDescription: osceCase,
-      historySections: osceType === 'history' ? osceHistorySections : undefined,
+      historySections: (osceType === 'history' || (osceType === 'OSCE' && osceHistorySections && Object.keys(osceHistorySections).length > 0)) ? osceHistorySections : undefined,
       markingScheme: [
-        ...getDefaultSections(osceType).map(section => ({
+        ...getDefaultSections(osceType, osceHistorySections && Object.keys(osceHistorySections).length > 0).map(section => ({
           section,
           items: (osceMarkItems[section] || []).map((i: any) => ({ desc: i.desc, score: Number(i.score) }))
         })),
@@ -212,7 +330,12 @@ const OsceStationForm: React.FC<OsceStationFormProps> = ({ mode, initialData, on
           items: (osceMarkItems[section] || []).map((i: any) => ({ desc: i.desc, score: Number(i.score) }))
         }))
       ],
-      followUps: osceFollowUps.filter(q => q.question.trim() && q.answers.some(a => a.trim())),
+      followUps: osceFollowUps.filter(q => q.question.trim() && q.answers.some(a => a.trim())).map(q => ({
+        question: q.question,
+        answers: q.answers,
+        score: Number(q.score)
+      })),
+      totalMarks: calculateTotalMarks(),
       images: osceImagePreviews,
     };
     onSubmit(payload);
@@ -279,7 +402,7 @@ const OsceStationForm: React.FC<OsceStationFormProps> = ({ mode, initialData, on
         {osceErrors.case && <p className="text-red-500 text-sm mt-1">{osceErrors.case}</p>}
       </div>
       {/* History Sections */}
-      {osceType === 'history' && (
+      {(osceType === 'history' || (osceType === 'OSCE' && osceHistorySections && Object.keys(osceHistorySections).length > 0)) && (
         <div className="bg-gray-50 rounded-xl p-6 shadow-sm mb-4">
           <h3 className="text-lg font-bold mb-4 text-green-700">History Sections (Actor)</h3>
           <div className="space-y-4">
@@ -304,10 +427,16 @@ const OsceStationForm: React.FC<OsceStationFormProps> = ({ mode, initialData, on
       <div className="bg-gray-50 rounded-xl p-6 shadow-sm mb-4">
         <h3 className="text-lg font-bold mb-4 text-green-700">Marking Scheme</h3>
         <div className="space-y-4">
-          {/* Fixed sections */}
-          {getDefaultSections(osceType).map(section => (
+          {/* Fixed sections - Non-editable titles */}
+          {(() => {
+            // Determine the actual type for rendering
+            const hasHistorySections = osceHistorySections && Object.keys(osceHistorySections).length > 0;
+            return getDefaultSections(osceType, hasHistorySections);
+          })().map(section => (
             <div key={section} className="border rounded-lg p-4 bg-white">
-              <div className="font-semibold mb-2">Section: {section}</div>
+              <div className="font-semibold mb-2 text-blue-700 bg-blue-50 px-3 py-2 rounded border-l-4 border-blue-400">
+                Section: {section}
+              </div>
               {(osceMarkItems[section] || []).map((item: any, idx: number) => (
                 <div key={idx} className="flex gap-2 mb-2">
                   <input
@@ -330,7 +459,7 @@ const OsceStationForm: React.FC<OsceStationFormProps> = ({ mode, initialData, on
               <button type="button" onClick={() => addMarkItem(section)} className="text-blue-600 text-sm">+ Add Marking Point</button>
             </div>
           ))}
-          {/* Custom sections */}
+          {/* Custom sections - Editable titles */}
           {osceCustomSections.map((section, sidx) => (
             <div key={sidx} className="border rounded-lg p-4 bg-white">
               <div className="flex items-center mb-2">
@@ -343,6 +472,7 @@ const OsceStationForm: React.FC<OsceStationFormProps> = ({ mode, initialData, on
                 />
                 <button type="button" onClick={() => removeCustomSection(sidx)} className="text-red-500">Remove Section</button>
               </div>
+              <div className="text-xs text-gray-500 mb-2">(Custom Section - Title Editable)</div>
               {(osceMarkItems[section] || []).map((item: any, idx: number) => (
                 <div key={idx} className="flex gap-2 mb-2">
                   <input
@@ -384,10 +514,21 @@ const OsceStationForm: React.FC<OsceStationFormProps> = ({ mode, initialData, on
                 />
                 {osceErrors[`followup_question_${idx}`] && <p className="text-red-500 text-xs mt-1">{osceErrors[`followup_question_${idx}`]}</p>}
               </div>
-              {osceFollowUps.length > 3 && (
-                <button type="button" onClick={() => removeFollowUp(idx)} className="text-red-500 self-center px-2 py-1 text-sm">Remove Question</button>
-              )}
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={q.score}
+                  onChange={e => updateFollowUp(idx, 'score', e.target.value)}
+                  className="w-20 px-2 py-1 border rounded"
+                  placeholder="Score"
+                />
+                <span className="text-sm text-gray-600">marks</span>
+                {osceFollowUps.length > 3 && (
+                  <button type="button" onClick={() => removeFollowUp(idx)} className="text-red-500 self-center px-2 py-1 text-sm">Remove Question</button>
+                )}
+              </div>
             </div>
+            {osceErrors[`followup_score_${idx}`] && <p className="text-red-500 text-xs mt-1">{osceErrors[`followup_score_${idx}`]}</p>}
             <div className="ml-4">
               <div className="text-sm font-medium text-gray-700 mb-2">Answers:</div>
               {q.answers.map((ans, aidx) => (
@@ -419,6 +560,18 @@ const OsceStationForm: React.FC<OsceStationFormProps> = ({ mode, initialData, on
         ))}
         <button type="button" onClick={addFollowUp} className="text-blue-600 text-sm">+ Add Follow-up Question</button>
         {osceErrors.followUps && <p className="text-red-500 text-sm mt-1">{osceErrors.followUps}</p>}
+      </div>
+      {/* Total Marks Display */}
+      <div className="bg-green-50 rounded-xl p-6 shadow-sm mb-4 border-l-4 border-green-500">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-green-700">Total Marks</h3>
+          <div className="text-2xl font-bold text-green-600 bg-white px-4 py-2 rounded-lg border-2 border-green-300">
+            {calculateTotalMarks()}
+          </div>
+        </div>
+        <p className="text-sm text-green-600 mt-2">
+          This is the sum of all marks from your marking scheme sections and follow-up questions.
+        </p>
       </div>
       {/* Images Section */}
       <div className="bg-gray-50 rounded-xl p-6 shadow-sm mb-4">

@@ -5,6 +5,7 @@ import {
   getOsceStations,
   getOsceStationById,
   updateOsceStation,
+  deleteOsceStation,
 } from '../controllers/osceStationController';
 
 const router = Router();
@@ -17,5 +18,7 @@ router.get('/', authenticate, getOsceStations);
 router.get('/:id', authenticate, getOsceStationById);
 // Admin updates OSCE station (approve/reject/feedback)
 router.patch('/:id', authenticate, updateOsceStation);
+// Delete OSCE station
+router.delete('/:id', authenticate, deleteOsceStation);
 
 export default router; 

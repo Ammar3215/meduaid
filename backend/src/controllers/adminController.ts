@@ -57,7 +57,7 @@ export const getRecentPenalties: RequestHandler = async (req, res) => {
 };
 
 export const createPenalty: RequestHandler = async (req, res) => {
-  console.log('POST /api/admin/penalties', req.body);
+  // POST /api/admin/penalties request received
   try {
     const user = (req as any).user;
     if (!user || user.role !== 'admin') {
@@ -96,7 +96,7 @@ export const createPenalty: RequestHandler = async (req, res) => {
     const populatedPenalty = await Penalty.findById(penalty._id).populate('writer', 'name email');
     res.status(201).json(populatedPenalty);
   } catch (err) {
-    console.error('Error in createPenalty:', err);
+    // Error in createPenalty occurred
     res.status(500).json({ message: 'Server error' });
   }
 };

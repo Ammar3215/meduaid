@@ -6,8 +6,8 @@ import ReactDOM from 'react-dom';
 import { ExclamationCircleIcon } from '@heroicons/react/24/outline';
 import Skeleton from '../components/Skeleton';
 import OsceStationViewModal from '../components/OsceStationViewModal';
+import { API_BASE_URL } from '../config/api';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
 function RejectionReasonCell({ reason = '-' }) {
   const [expanded, setExpanded] = useState(false);

@@ -1,7 +1,7 @@
 import React from 'react';
 import { subjectsStructure } from '../utils/subjectsStructure';
+import { API_BASE_URL } from '../config/api';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
 function AdminEditQuestionForm({ submission, onClose, onSave }: { submission: any, onClose: () => void, onSave: (updated: any) => void }) {
   const [form, setForm] = React.useState<any>({

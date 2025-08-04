@@ -5,6 +5,7 @@ import { FunnelIcon, UserGroupIcon, CalendarDaysIcon, BookOpenIcon, TagIcon, Eye
 import QuestionViewModal from '../components/QuestionViewModal';
 import OsceStationViewModal from '../components/OsceStationViewModal';
 import AdminEditQuestionForm from '../components/AdminEditQuestionForm';
+import { API_BASE_URL } from '../config/api';
 
 const allCategories = ['All', ...Object.keys(subjectsStructure)];
 
@@ -39,8 +40,6 @@ function getInitials(name: string) {
   if (parts.length === 1) return parts[0][0].toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
 const AllAdminSubmissions: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
@@ -208,18 +207,26 @@ const AllAdminSubmissions: React.FC = () => {
   };
 
   // Delete handler for admin
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this question? This action cannot be undone.')) return;
+  const handleDelete = async (id: string, type?: string) => {
+    const itemType = type === 'OSCE' ? 'OSCE station' : 'question';
+    if (!window.confirm(`Are you sure you want to delete this ${itemType}? This action cannot be undone.`)) return;
     setError('');
     try {
-      const res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
+      let endpoint;
+      if (type === 'OSCE') {
+        endpoint = `${API_BASE_URL}/api/osce-stations/${id}`;
+      } else {
+        endpoint = `${API_BASE_URL}/api/submissions/${id}`;
+      }
+      
+      const res = await fetch(endpoint, {
         method: 'DELETE',
         credentials: 'include',
       });
-      if (!res.ok) throw new Error('Failed to delete question');
+      if (!res.ok) throw new Error(`Failed to delete ${itemType}`);
       setQuestions(prev => prev.filter(q => q._id !== id));
       setModalOpen(false);
-      setSuccessMessage('Question deleted successfully');
+      setSuccessMessage(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} deleted successfully`);
       setTimeout(() => setSuccessMessage(''), 2000);
     } catch (err: any) {
       setError(err.message || 'Network error');
@@ -470,7 +477,7 @@ const AllAdminSubmissions: React.FC = () => {
                               className="inline-flex items-center justify-center bg-gray-100 border border-gray-300 text-red-500 rounded-full p-2 hover:bg-red-500 hover:text-white hover:border-red-500 transition focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
                               aria-label="Delete submission"
                               type="button"
-                              onClick={() => handleDelete(q._id)}
+                              onClick={() => handleDelete(q._id, q.type)}
                             >
                               <TrashIcon className="w-5 h-5" />
                             </button>
@@ -563,7 +570,7 @@ const AllAdminSubmissions: React.FC = () => {
                               className="inline-flex items-center justify-center bg-gray-100 border border-gray-300 text-red-500 rounded-full p-2 hover:bg-red-500 hover:text-white hover:border-red-500 transition focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
                               aria-label="Delete submission"
                               type="button"
-                              onClick={() => handleDelete(q._id)}
+                              onClick={() => handleDelete(q._id, q.type)}
                             >
                               <TrashIcon className="w-5 h-5" />
                             </button>
@@ -592,6 +599,48 @@ const AllAdminSubmissions: React.FC = () => {
                 setQuestions(prev => prev.map(q => q._id === updatedWithType._id ? updatedWithType : q));
                 setAllQuestions(prev => prev.map(q => q._id === updatedWithType._id ? updatedWithType : q));
                 setSelectedSubmission(updatedWithType);
+              }}
+              onAction={(type, message, itemId) => {
+                // onAction triggered
+                if (type === 'delete' && itemId) {
+                  // Remove deleted item from both questions arrays
+                  setQuestions(prev => {
+                    const filtered = prev.filter(q => q._id !== itemId);
+                    // Delete operation on pending questions
+                    return filtered;
+                  });
+                  setAllQuestions(prev => {
+                    const filtered = prev.filter(q => q._id !== itemId);
+                    // Delete operation on all questions
+                    return filtered;
+                  });
+                  setModalOpen(false);
+                  setSuccessMessage(message);
+                  setTimeout(() => setSuccessMessage(''), 3000);
+                } else if (type === 'approve' || type === 'reject' || type === 'pending') {
+                  // Update item status and remove from pending if approved/rejected
+                  if (itemId) {
+                    const newStatus = type === 'approve' ? 'approved' : type === 'reject' ? 'rejected' : 'pending';
+                    // Status update operation
+                    
+                    // Always update both lists regardless of status change
+                    setQuestions(prev => prev.map(q => q._id === itemId ? { ...q, status: newStatus } : q));
+                    setAllQuestions(prev => prev.map(q => q._id === itemId ? { ...q, status: newStatus } : q));
+                    
+                    setModalOpen(false);
+                    setSuccessMessage(message);
+                    setTimeout(() => setSuccessMessage(''), 3000);
+                  }
+                } else {
+                  const isErrorType = type === 'error';
+                  if (isErrorType) {
+                    setError(message);
+                    setTimeout(() => setError(''), 3000);
+                  } else {
+                    setSuccessMessage(message);
+                    setTimeout(() => setSuccessMessage(''), 3000);
+                  }
+                }
               }}
             />
           ) : (
@@ -640,13 +689,6 @@ const AllAdminSubmissions: React.FC = () => {
                     onClick={() => setModalMode('edit')}
                   >
                     Edit
-                  </button>
-                  <button
-                    className="bg-red-500 text-white px-4 py-2 rounded font-semibold hover:bg-red-600 transition mt-2"
-                    onClick={() => handleDelete(selectedSubmission._id)}
-                    disabled={modalLoading}
-                  >
-                    Delete
                   </button>
                 </div>
               )}

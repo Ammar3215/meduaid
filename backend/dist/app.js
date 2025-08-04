@@ -12,8 +12,13 @@ const submissions_1 = __importDefault(require("./routes/submissions"));
 const admin_1 = __importDefault(require("./routes/admin"));
 const writer_1 = __importDefault(require("./routes/writer"));
 const osceStations_1 = __importDefault(require("./routes/osceStations"));
+const errorHandler_1 = require("./middleware/errorHandler");
 const path_1 = __importDefault(require("path"));
 const app = (0, express_1.default)();
+// Trust proxy for Render deployment
+if (process.env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1);
+}
 app.use((0, cors_1.default)({
     origin: [
         'http://localhost:5173',
@@ -72,4 +77,7 @@ app.use('/api/submissions', submissions_1.default);
 app.use('/api/admin', admin_1.default);
 app.use('/api/writer', writer_1.default);
 app.use('/api/osce-stations', osceStations_1.default);
+// Error handling middleware (must be last)
+app.use(errorHandler_1.notFoundHandler);
+app.use(errorHandler_1.globalErrorHandler);
 exports.default = app;

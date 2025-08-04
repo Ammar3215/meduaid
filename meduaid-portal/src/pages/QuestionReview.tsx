@@ -6,8 +6,7 @@ import ReactDOM from 'react-dom';
 import Skeleton from '../components/Skeleton';
 import OsceStationViewModal from '../components/OsceStationViewModal';
 import AdminEditQuestionForm from '../components/AdminEditQuestionForm';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+import { API_BASE_URL } from '../config/api';
 
 const QuestionReview: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -95,7 +94,17 @@ const QuestionReview: React.FC = () => {
         body: JSON.stringify({ status }),
       });
       if (response.ok) {
-        setQuestions((prev) => prev.filter((q) => q._id !== id));
+        // Remove from pending questions if approved or rejected
+        if (status === 'approved' || status === 'rejected') {
+          setQuestions((prev) => prev.filter((q) => q._id !== id));
+        } else {
+          // Update status in pending questions if set back to pending
+          setQuestions((prev) => prev.map((q) => q._id === id ? { ...q, status } : q));
+        }
+        
+        // Update status in all questions
+        setAllQuestions((prev) => prev.map((q) => q._id === id ? { ...q, status } : q));
+        
         setEditReasonId(null);
         if (detailsModal.open) setDetailsModal({ open: false, question: null });
         setToast({
@@ -128,7 +137,12 @@ const QuestionReview: React.FC = () => {
         body: JSON.stringify({ status: 'rejected', rejectionReason }),
       });
       if (response.ok) {
+        // Remove from pending questions since it's rejected
         setQuestions((prev) => prev.filter((q) => q._id !== id));
+        
+        // Update status in all questions
+        setAllQuestions((prev) => prev.map((q) => q._id === id ? { ...q, status: 'rejected', rejectionReason } : q));
+        
         setEditReasonId(null);
         setRejectionReason('');
         if (detailsModal.open) setDetailsModal({ open: false, question: null });
@@ -461,7 +475,55 @@ const QuestionReview: React.FC = () => {
             station={detailsModal.question}
             loading={false}
             error={''}
-            onAction={(type, message) => setToast({ type, message })}
+            onAction={(type, message, itemId) => {
+              // onAction triggered
+              if (type === 'delete' && itemId) {
+                // Remove deleted item from both questions arrays
+                setQuestions(prev => {
+                  const filtered = prev.filter(q => q._id !== itemId);
+                  // Delete operation on pending questions
+                  return filtered;
+                });
+                setAllQuestions(prev => {
+                  const filtered = prev.filter(q => q._id !== itemId);
+                  // Delete operation on all questions
+                  return filtered;
+                });
+                setDetailsModal({ open: false, question: null });
+                setToast({ type: 'success', message });
+                setTimeout(() => setToast(null), 2000);
+              } else if (type === 'approve' || type === 'reject' || type === 'pending') {
+                // Update item status and remove from pending if approved/rejected
+                if (itemId) {
+                  const newStatus = type === 'approve' ? 'approved' : type === 'reject' ? 'rejected' : 'pending';
+                  // Status update operation
+                  
+                  // Remove from pending questions if approved or rejected
+                  if (newStatus === 'approved' || newStatus === 'rejected') {
+                    setQuestions(prev => {
+                      const filtered = prev.filter(q => q._id !== itemId);
+                      // Status update on pending questions
+                      return filtered;
+                    });
+                  } else {
+                    // Update status in pending questions if set back to pending
+                    setQuestions(prev => prev.map(q => q._id === itemId ? { ...q, status: newStatus } : q));
+                  }
+                  
+                  // Update status in all questions
+                  setAllQuestions(prev => prev.map(q => q._id === itemId ? { ...q, status: newStatus } : q));
+                  
+                  setDetailsModal({ open: false, question: null });
+                  const toastType = type === 'approve' ? 'success' : type === 'reject' ? 'error' : 'info';
+                  setToast({ type: toastType, message });
+                  setTimeout(() => setToast(null), 2000);
+                }
+              } else {
+                const toastType = type === 'error' ? 'error' : type === 'info' ? 'info' : 'success';
+                setToast({ type: toastType, message });
+                setTimeout(() => setToast(null), 2000);
+              }
+            }}
           />
         ) : (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">

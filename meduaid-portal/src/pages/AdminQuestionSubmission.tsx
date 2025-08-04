@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { subjectsStructure } from '../utils/subjectsStructure';
 import { useAuth } from '../context/AuthContext';
 import { ClipboardDocumentListIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { API_BASE_URL } from '../config/api';
 
 const questionSchema = z.object({
   category: z.string().nonempty('Required field'),
@@ -25,7 +26,6 @@ type AdminQuestionFormInputs = z.infer<typeof questionSchema>;
 
 type Writer = { _id: string; name: string; email: string };
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
 const osceStationTypes = [
   { value: 'history', label: 'History Taking' },
@@ -71,10 +71,10 @@ const AdminQuestionSubmission: React.FC = () => {
   const [osceSubtopic, setOsceSubtopic] = useState('');
   const [osceWriter, setOsceWriter] = useState(''); // Add writer state for OSCE
   const [osceMarkItems, setOsceMarkItems] = useState<{ [section: string]: { desc: string; score: string }[] }>({});
-  const [osceFollowUps, setOsceFollowUps] = useState<{ question: string; answers: string[] }[]>([
-    { question: '', answers: [''] },
-    { question: '', answers: [''] },
-    { question: '', answers: [''] },
+  const [osceFollowUps, setOsceFollowUps] = useState<{ question: string; answers: string[]; score: string }[]>([
+    { question: '', answers: [''], score: '' },
+    { question: '', answers: [''], score: '' },
+    { question: '', answers: [''], score: '' },
   ]);
   const [osceImagePreviews, setOsceImagePreviews] = useState<string[]>([]);
   const [osceGuidelinesConfirmed, setOsceGuidelinesConfirmed] = useState(false);
@@ -106,7 +106,7 @@ const AdminQuestionSubmission: React.FC = () => {
     'ICE (Ideas, Concerns, Expectations)',
     'Summary and Closure',
   ];
-  const [osceHistorySections] = useState<{ [key: string]: string }>(
+  const [osceHistorySections, setOsceHistorySections] = useState<{ [key: string]: string }>(
     Object.fromEntries(historySectionKeys.map(k => [k, '']))
   );
 
@@ -174,11 +174,11 @@ const AdminQuestionSubmission: React.FC = () => {
   const [osceImages, setOsceImages] = useState<FileList | null>(null);
 
   // Add/Remove follow-up questions
-  const addFollowUp = () => setOsceFollowUps([...osceFollowUps, { question: '', answers: [''] }]);
+  const addFollowUp = () => setOsceFollowUps([...osceFollowUps, { question: '', answers: [''], score: '' }]);
   const removeFollowUp = (idx: number) => {
     if (osceFollowUps.length > 3) setOsceFollowUps(osceFollowUps.filter((_, i) => i !== idx));
   };
-  const updateFollowUp = (idx: number, field: 'question' | 'answers', val: string | string[]) => {
+  const updateFollowUp = (idx: number, field: 'question' | 'answers' | 'score', val: string | string[]) => {
     setOsceFollowUps(osceFollowUps.map((q, i) => i === idx ? { ...q, [field]: val } : q));
   };
   
@@ -383,6 +383,17 @@ const AdminQuestionSubmission: React.FC = () => {
     if (!osceSubject) errs.subject = 'Subject is required.';
     if (!osceTopic) errs.topic = 'Topic is required.';
     if (!osceWriter) errs.writer = 'Writer assignment is required.';
+    
+    // Validate marking scheme has at least some items
+    const hasMarkingItems = [
+      ...getDefaultSections().map(section => osceMarkItems[section] || []),
+      ...osceCustomSections.map(section => osceMarkItems[section] || [])
+    ].some(items => items.length > 0);
+    
+    if (!hasMarkingItems && osceFollowUps.filter(q => q.question.trim()).length === 0) {
+      errs.markingScheme = 'At least some marking scheme items or follow-up questions are required.';
+    }
+    
     if (osceType === 'history') {
       for (const key of historySectionKeys) {
         if (!osceHistorySections[key] || !osceHistorySections[key].trim()) {
@@ -394,6 +405,7 @@ const AdminQuestionSubmission: React.FC = () => {
     osceFollowUps.forEach((q, idx) => {
       if (q.question.trim() && !q.answers.some(ans => ans.trim())) errs[`followup_answer_${idx}`] = 'Answer is required.';
       if (!q.question.trim() && q.answers.some(ans => ans.trim())) errs[`followup_question_${idx}`] = 'Question is required.';
+      if (q.question.trim() && q.answers.some(ans => ans.trim()) && (!q.score || !q.score.trim())) errs[`followup_score_${idx}`] = 'Score is required.';
     });
     if (!osceGuidelinesConfirmed) errs.guidelines = 'You must confirm you have read and followed the guidelines.';
     setOsceErrors(errs);
@@ -407,10 +419,23 @@ const AdminQuestionSubmission: React.FC = () => {
     if (!validateOsce()) return;
     setLoading(true);
     try {
+      // Validate writer selection first
+      if (!osceWriter) {
+        setError('Please select a writer for this OSCE station.');
+        setLoading(false);
+        return;
+      }
+
       // Upload images first
       let imageUrls: string[] = [];
       if (osceImages && osceImages.length > 0) {
-        imageUrls = await uploadImages(osceImages);
+        try {
+          imageUrls = await uploadImages(osceImages);
+        } catch (uploadErr) {
+          setError('Failed to upload images. Please try again.');
+          setLoading(false);
+          return;
+        }
       }
       
       const payload: any = {
@@ -425,18 +450,24 @@ const AdminQuestionSubmission: React.FC = () => {
         markingScheme: [
           ...getDefaultSections().map(section => ({
             section,
-            items: (osceMarkItems[section] || []).map(i => ({ desc: i.desc, score: Number(i.score) }))
-          })),
+            items: (osceMarkItems[section] || []).map(i => ({ desc: i.desc, score: Number(i.score) || 0 }))
+          })).filter(section => section.items.length > 0), // Only include sections with items
           ...osceCustomSections.filter(Boolean).map(section => ({
             section,
-            items: (osceMarkItems[section] || []).map(i => ({ desc: i.desc, score: Number(i.score) }))
-          }))
+            items: (osceMarkItems[section] || []).map(i => ({ desc: i.desc, score: Number(i.score) || 0 }))
+          })).filter(section => section.items.length > 0) // Only include sections with items
         ],
-        followUps: osceFollowUps.filter(q => q.question.trim() && q.answers.some(ans => ans.trim())),
+        followUps: osceFollowUps.filter(q => q.question.trim() && q.answers.some(ans => ans.trim())).map(q => ({
+          question: q.question,
+          answers: q.answers.filter(ans => ans.trim()),
+          score: Number(q.score) || 0
+        })),
+        totalMarks: calculateTotalMarks(),
         images: imageUrls,
         status: 'pending',
         writer: osceWriter, // Add writer to payload
       };
+      
       const res = await fetch(`${API_BASE_URL}/api/osce-stations`, {
         method: 'POST',
         headers: {
@@ -445,26 +476,43 @@ const AdminQuestionSubmission: React.FC = () => {
         credentials: 'include',
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error('Failed to submit OSCE station');
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to submit OSCE station (${res.status})`);
+      }
+      
+      // Show success toast
       setSuccess(true);
-      setTimeout(() => setSuccess(false), 2000);
-      // Reset form
+      setTimeout(() => setSuccess(false), 4000); // Show longer for better UX
+      
+      // Complete form reset for new submission
       setOsceTitle('');
       setOsceCase('');
       setOsceCategory(Object.keys(subjectsStructure)[0] || '');
       setOsceSubject('');
       setOsceTopic('');
       setOsceSubtopic('');
+      setOsceType('history'); // Reset to default type
       setOsceWriter(''); // Reset writer field
+      setOsceHistorySections(Object.fromEntries(historySectionKeys.map(k => [k, '']))); // Reset history sections
       setOsceMarkItems({});
       setOsceCustomSections([]);
-      setOsceFollowUps([{ question: '', answers: [''] }, { question: '', answers: [''] }, { question: '', answers: [''] }]);
+      setOsceFollowUps([
+        { question: '', answers: [''], score: '' }, 
+        { question: '', answers: [''], score: '' }, 
+        { question: '', answers: [''], score: '' }
+      ]);
       setOsceImagePreviews([]);
       setOsceImages(null); // Reset images
       setOsceGuidelinesConfirmed(false);
       setOsceErrors({});
+      
+      // Scroll to top for better UX
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
-      setError(err.message || 'Network error');
+      // OSCE submission error occurred
+      setError(err.message || 'Network error. Please try again.');
     }
     setLoading(false);
   };
@@ -476,10 +524,23 @@ const AdminQuestionSubmission: React.FC = () => {
     if (!validateOsce()) return;
     setLoading(true);
     try {
+      // Validate writer selection first
+      if (!osceWriter) {
+        setError('Please select a writer for this OSCE station.');
+        setLoading(false);
+        return;
+      }
+
       // Upload images first
       let imageUrls: string[] = [];
       if (osceImages && osceImages.length > 0) {
-        imageUrls = await uploadImages(osceImages);
+        try {
+          imageUrls = await uploadImages(osceImages);
+        } catch (uploadErr) {
+          setError('Failed to upload images. Please try again.');
+          setLoading(false);
+          return;
+        }
       }
       
       const payload: any = {
@@ -494,18 +555,24 @@ const AdminQuestionSubmission: React.FC = () => {
         markingScheme: [
           ...getDefaultSections().map(section => ({
             section,
-            items: (osceMarkItems[section] || []).map(i => ({ desc: i.desc, score: Number(i.score) }))
-          })),
+            items: (osceMarkItems[section] || []).map(i => ({ desc: i.desc, score: Number(i.score) || 0 }))
+          })).filter(section => section.items.length > 0), // Only include sections with items
           ...osceCustomSections.filter(Boolean).map(section => ({
             section,
-            items: (osceMarkItems[section] || []).map(i => ({ desc: i.desc, score: Number(i.score) }))
-          }))
+            items: (osceMarkItems[section] || []).map(i => ({ desc: i.desc, score: Number(i.score) || 0 }))
+          })).filter(section => section.items.length > 0) // Only include sections with items
         ],
-        followUps: osceFollowUps.filter(q => q.question.trim() && q.answers.some(ans => ans.trim())),
+        followUps: osceFollowUps.filter(q => q.question.trim() && q.answers.some(ans => ans.trim())).map(q => ({
+          question: q.question,
+          answers: q.answers.filter(ans => ans.trim()),
+          score: Number(q.score) || 0
+        })),
+        totalMarks: calculateTotalMarks(),
         images: imageUrls,
         status: 'draft',
         writer: osceWriter, // Add writer to payload
       };
+      
       const res = await fetch(`${API_BASE_URL}/api/osce-stations`, {
         method: 'POST',
         headers: {
@@ -514,13 +581,46 @@ const AdminQuestionSubmission: React.FC = () => {
         credentials: 'include',
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error('Failed to save draft');
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to save draft (${res.status})`);
+      }
+      
       setDraftSuccess(true);
       setTimeout(() => setDraftSuccess(false), 2000);
     } catch (err: any) {
-      setError(err.message || 'Network error');
+      // OSCE draft save error occurred
+      setError(err.message || 'Network error. Please try again.');
     }
     setLoading(false);
+  };
+
+  // Calculate total marks from marking scheme
+  const calculateTotalMarks = () => {
+    let total = 0;
+    // Sum marks from default sections
+    getDefaultSections().forEach(section => {
+      const items = osceMarkItems[section] || [];
+      items.forEach(item => {
+        const score = parseFloat(item.score) || 0;
+        total += score;
+      });
+    });
+    // Sum marks from custom sections
+    osceCustomSections.forEach(section => {
+      const items = osceMarkItems[section] || [];
+      items.forEach(item => {
+        const score = parseFloat(item.score) || 0;
+        total += score;
+      });
+    });
+    // Sum marks from follow-up questions
+    osceFollowUps.forEach(q => {
+      const score = parseFloat(q.score) || 0;
+      total += score;
+    });
+    return total;
   };
 
   return (
@@ -919,10 +1019,21 @@ const AdminQuestionSubmission: React.FC = () => {
                       />
                       {osceErrors[`followup_question_${idx}`] && <p className="text-red-500 text-xs mt-1">{osceErrors[`followup_question_${idx}`]}</p>}
                     </div>
-                    {osceFollowUps.length > 3 && (
-                      <button type="button" onClick={() => removeFollowUp(idx)} className="text-red-500 self-center px-2 py-1 text-sm">Remove Question</button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={q.score}
+                        onChange={e => updateFollowUp(idx, 'score', e.target.value)}
+                        className="w-20 px-2 py-1 border rounded"
+                        placeholder="Score"
+                      />
+                      <span className="text-sm text-gray-600">marks</span>
+                      {osceFollowUps.length > 3 && (
+                        <button type="button" onClick={() => removeFollowUp(idx)} className="text-red-500 self-center px-2 py-1 text-sm">Remove Question</button>
+                      )}
+                    </div>
                   </div>
+                  {osceErrors[`followup_score_${idx}`] && <p className="text-red-500 text-xs mt-1">{osceErrors[`followup_score_${idx}`]}</p>}
                   <div className="ml-4">
                     <div className="text-sm font-medium text-gray-700 mb-2">Answers:</div>
                     {q.answers.map((ans, aidx) => (
@@ -986,6 +1097,18 @@ const AdminQuestionSubmission: React.FC = () => {
                 </div>
               )}
             </div>
+            {/* Total Marks Display */}
+            <div className="bg-green-50 rounded-xl p-6 shadow-sm mb-4 border-l-4 border-green-500">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-green-700">Total Marks</h3>
+                <div className="text-2xl font-bold text-green-600 bg-white px-4 py-2 rounded-lg border-2 border-green-300">
+                  {calculateTotalMarks()}
+                </div>
+              </div>
+              <p className="text-sm text-green-600 mt-2">
+                This is the sum of all marks from your marking scheme sections.
+              </p>
+            </div>
           </div>
           <div className="bg-white py-4 px-2 flex flex-col md:flex-row justify-end gap-2 md:gap-4 border-t rounded-b-xl shadow-lg">
             <button
@@ -1004,9 +1127,28 @@ const AdminQuestionSubmission: React.FC = () => {
               {loading ? 'Submitting...' : 'Submit OSCE Station'}
             </button>
           </div>
-          {success && <div className="text-green-600 text-center mt-2">OSCE station submitted successfully!</div>}
+          {success && (
+            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 text-center animate-bounce">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <span className="font-semibold">OSCE Station Submitted Successfully!</span>
+              </div>
+              <div className="text-sm mt-1 opacity-90">Form has been reset for your next submission</div>
+            </div>
+          )}
           {error && <div className="text-red-500 text-center mt-2">{error}</div>}
-          {draftSuccess && <div className="text-green-600 text-center mt-2">OSCE station draft saved!</div>}
+          {draftSuccess && (
+            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 text-center">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12"></path>
+                </svg>
+                <span className="font-semibold">OSCE Station Draft Saved!</span>
+              </div>
+            </div>
+          )}
         </form>
       )}
     </div>

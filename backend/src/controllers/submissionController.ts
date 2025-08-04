@@ -124,7 +124,7 @@ export const updateSubmissionStatus: RequestHandler = async (req, res) => {
       // Validate status value if present
       const allowedStatuses = ['pending', 'approved', 'rejected'];
       if (status && !allowedStatuses.includes(status)) {
-        console.log('Invalid status value received:', status);
+        // Invalid status value received
         res.status(400).json({ message: 'Invalid status value' });
         return;
       }
@@ -143,13 +143,13 @@ export const updateSubmissionStatus: RequestHandler = async (req, res) => {
       // Add admin-specific fields
       if (status) updateObj.status = status;
       if (rejectionReason !== undefined) updateObj.rejectionReason = rejectionReason;
-      console.log('PATCH admin:', { id, updateObj });
+      // Admin PATCH request processed
       const updated = await Submission.findByIdAndUpdate(
         id,
         updateObj,
         { new: true }
       );
-      console.log('Updated submission:', updated);
+      // Submission updated successfully
       res.json(updated);
       return;
     }

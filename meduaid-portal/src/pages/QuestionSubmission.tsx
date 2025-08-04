@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { subjectsStructure } from '../utils/subjectsStructure';
 import { ClipboardDocumentListIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { API_BASE_URL } from '../config/api';
 
 const questionSchema = z.object({
   category: z.string().nonempty('Please select a category.'),
@@ -24,7 +25,6 @@ const questionSchema = z.object({
 
 type QuestionFormInputs = z.infer<typeof questionSchema>;
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
 const osceStationTypes = [
   { value: 'history', label: 'History Taking' },
@@ -80,10 +80,10 @@ const QuestionSubmission: React.FC = () => {
   const [osceSubtopic, setOsceSubtopic] = useState('');
   const [osceMarkItems, setOsceMarkItems] = useState<{ [section: string]: { desc: string; score: string }[] }>({});
   // Update follow-ups to include multiple answers
-  const [osceFollowUps, setOsceFollowUps] = useState<{ question: string; answers: string[] }[]>([
-    { question: '', answers: [''] },
-    { question: '', answers: [''] },
-    { question: '', answers: [''] },
+  const [osceFollowUps, setOsceFollowUps] = useState<{ question: string; answers: string[]; score: string }[]>([
+    { question: '', answers: [''], score: '' },
+    { question: '', answers: [''], score: '' },
+    { question: '', answers: [''], score: '' },
   ]);
   const [osceImagePreviews, setOsceImagePreviews] = useState<string[]>([]);
   const [osceGuidelinesConfirmed, setOsceGuidelinesConfirmed] = useState(false);
@@ -250,11 +250,11 @@ const QuestionSubmission: React.FC = () => {
   };
 
   // Add/Remove follow-up questions
-  const addFollowUp = () => setOsceFollowUps([...osceFollowUps, { question: '', answers: [''] }]);
+  const addFollowUp = () => setOsceFollowUps([...osceFollowUps, { question: '', answers: [''], score: '' }]);
   const removeFollowUp = (idx: number) => {
     if (osceFollowUps.length > 3) setOsceFollowUps(osceFollowUps.filter((_, i) => i !== idx));
   };
-  const updateFollowUp = (idx: number, field: 'question' | 'answers', val: string | string[]) => {
+  const updateFollowUp = (idx: number, field: 'question' | 'answers' | 'score', val: string | string[]) => {
     setOsceFollowUps(osceFollowUps.map((q, i) => i === idx ? { ...q, [field]: val } : q));
   };
   
@@ -322,6 +322,7 @@ const QuestionSubmission: React.FC = () => {
     osceFollowUps.forEach((q, idx) => {
       if (q.question.trim() && !q.answers.some(ans => ans.trim())) errs[`followup_answer_${idx}`] = 'Answer is required.';
       if (!q.question.trim() && q.answers.some(ans => ans.trim())) errs[`followup_question_${idx}`] = 'Question is required.';
+      if (q.question.trim() && q.answers.some(ans => ans.trim()) && (!q.score || !q.score.trim())) errs[`followup_score_${idx}`] = 'Score is required.';
     });
     if (!osceGuidelinesConfirmed) errs.guidelines = 'You must confirm you have read and followed the guidelines.';
     setOsceErrors(errs);
@@ -355,7 +356,12 @@ const QuestionSubmission: React.FC = () => {
             items: (osceMarkItems[section] || []).map(i => ({ desc: i.desc, score: Number(i.score) }))
           }))
         ],
-        followUps: osceFollowUps.filter(q => q.question.trim() && q.answers.some(ans => ans.trim())),
+        followUps: osceFollowUps.filter(q => q.question.trim() && q.answers.some(ans => ans.trim())).map(q => ({
+          question: q.question,
+          answers: q.answers,
+          score: Number(q.score)
+        })),
+        totalMarks: calculateTotalMarks(),
         images: osceImagePreviews, // (handle upload if needed)
         status: 'pending',
       };
@@ -379,7 +385,7 @@ const QuestionSubmission: React.FC = () => {
       setOsceSubtopic('');
       setOsceMarkItems({});
       setOsceCustomSections([]);
-      setOsceFollowUps([{ question: '', answers: [''] }, { question: '', answers: [''] }, { question: '', answers: [''] }]);
+      setOsceFollowUps([{ question: '', answers: [''], score: '' }, { question: '', answers: [''], score: '' }, { question: '', answers: [''], score: '' }]);
       setOsceImagePreviews([]);
       setOsceGuidelinesConfirmed(false);
       setOsceErrors({});
@@ -416,7 +422,12 @@ const QuestionSubmission: React.FC = () => {
             items: (osceMarkItems[section] || []).map(i => ({ desc: i.desc, score: Number(i.score) }))
           }))
         ],
-        followUps: osceFollowUps.filter(q => q.question.trim() && q.answers.some(ans => ans.trim())),
+        followUps: osceFollowUps.filter(q => q.question.trim() && q.answers.some(ans => ans.trim())).map(q => ({
+          question: q.question,
+          answers: q.answers,
+          score: Number(q.score)
+        })),
+        totalMarks: calculateTotalMarks(),
         images: osceImagePreviews, // (handle upload if needed)
         status: 'draft',
       };
@@ -435,6 +446,33 @@ const QuestionSubmission: React.FC = () => {
       setError(err.message || 'Network error');
     }
     setLoading(false);
+  };
+
+  // Calculate total marks from marking scheme
+  const calculateTotalMarks = () => {
+    let total = 0;
+    // Sum marks from default sections
+    getDefaultSections().forEach(section => {
+      const items = osceMarkItems[section] || [];
+      items.forEach(item => {
+        const score = parseFloat(item.score) || 0;
+        total += score;
+      });
+    });
+    // Sum marks from custom sections
+    osceCustomSections.forEach(section => {
+      const items = osceMarkItems[section] || [];
+      items.forEach(item => {
+        const score = parseFloat(item.score) || 0;
+        total += score;
+      });
+    });
+    // Sum marks from follow-up questions
+    osceFollowUps.forEach(q => {
+      const score = parseFloat(q.score) || 0;
+      total += score;
+    });
+    return total;
   };
 
   return (
@@ -804,10 +842,21 @@ const QuestionSubmission: React.FC = () => {
                     />
                     {osceErrors[`followup_question_${idx}`] && <p className="text-red-500 text-xs mt-1">{osceErrors[`followup_question_${idx}`]}</p>}
                   </div>
-                  {osceFollowUps.length > 3 && (
-                    <button type="button" onClick={() => removeFollowUp(idx)} className="text-red-500 self-center px-2 py-1 text-sm">Remove Question</button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={q.score}
+                      onChange={e => updateFollowUp(idx, 'score', e.target.value)}
+                      className="w-20 px-2 py-1 border rounded"
+                      placeholder="Score"
+                    />
+                    <span className="text-sm text-gray-600">marks</span>
+                    {osceFollowUps.length > 3 && (
+                      <button type="button" onClick={() => removeFollowUp(idx)} className="text-red-500 self-center px-2 py-1 text-sm">Remove Question</button>
+                    )}
+                  </div>
                 </div>
+                {osceErrors[`followup_score_${idx}`] && <p className="text-red-500 text-xs mt-1">{osceErrors[`followup_score_${idx}`]}</p>}
                 <div className="ml-4">
                   <div className="text-sm font-medium text-gray-700 mb-2">Answers:</div>
                   {q.answers.map((ans, aidx) => (
@@ -868,6 +917,18 @@ const QuestionSubmission: React.FC = () => {
             {osceErrors.guidelines && (
               <p className="text-red-500 text-xs mb-4">{osceErrors.guidelines}</p>
             )}
+          </div>
+          {/* Total Marks Display */}
+          <div className="bg-green-50 rounded-xl p-6 shadow-sm mb-4 border-l-4 border-green-500">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-green-700">Total Marks</h3>
+              <div className="text-2xl font-bold text-green-600 bg-white px-4 py-2 rounded-lg border-2 border-green-300">
+                {calculateTotalMarks()}
+              </div>
+            </div>
+            <p className="text-sm text-green-600 mt-2">
+              This is the sum of all marks from your marking scheme sections.
+            </p>
           </div>
           {/* Submit Bar */}
           <div className="bg-white py-4 px-2 flex flex-col md:flex-row justify-end gap-2 md:gap-4 border-t rounded-b-xl shadow-lg">

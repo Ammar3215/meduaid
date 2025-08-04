@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL } from '../config/api';
 
 const Settings: React.FC = () => {
   const { user, setUser } = useAuth();
@@ -14,7 +15,6 @@ const Settings: React.FC = () => {
     email: '',
   });
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
   useEffect(() => {
     if (user) {

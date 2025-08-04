@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import OsceStationEditModal from './OsceStationEditModal';
 import { useAuth } from '../context/AuthContext';
-import { CheckCircleIcon, XCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { CheckCircleIcon, XCircleIcon, ClockIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { API_BASE_URL } from '../config/api';
 
 interface OsceStationViewModalProps {
   open: boolean;
@@ -11,7 +12,7 @@ interface OsceStationViewModalProps {
   error?: string;
   user?: any; // allow user prop
   onSave?: (updated: any) => void;
-  onAction?: (type: 'success' | 'error' | 'info', message: string) => void;
+  onAction?: (type: 'success' | 'error' | 'info' | 'delete' | 'approve' | 'reject' | 'pending', message: string, itemId?: string) => void;
   children?: React.ReactNode;
 }
 
@@ -35,7 +36,7 @@ const OsceStationViewModal: React.FC<OsceStationViewModalProps> = (props) => {
     setEditLoading(true);
     setEditError('');
     try {
-      const res = await fetch(`/api/osce-stations/${station._id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/osce-stations/${station._id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -45,11 +46,35 @@ const OsceStationViewModal: React.FC<OsceStationViewModalProps> = (props) => {
       });
       if (!res.ok) throw new Error('Failed to update OSCE station');
       let updated = await res.json();
-      updated = { ...updated, type: 'OSCE' };
       setCurrentStation(updated);
       setEditOpen(false);
       if (onSave) onSave(updated);
     } catch (err: any) {
+      setEditError(err.message || 'Network error');
+    }
+    setEditLoading(false);
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this OSCE station? This action cannot be undone.')) {
+      return;
+    }
+    // Starting delete operation
+    setEditLoading(true);
+    setEditError('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/osce-stations/${station._id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to delete OSCE station');
+      // Delete operation successful
+      if (onAction) {
+        onAction('delete', 'OSCE station deleted successfully', station._id);
+      }
+      onClose();
+    } catch (err: any) {
+      // Delete operation failed
       setEditError(err.message || 'Network error');
     }
     setEditLoading(false);
@@ -65,7 +90,7 @@ const OsceStationViewModal: React.FC<OsceStationViewModalProps> = (props) => {
     try {
       const body: any = { status: newStatus };
       if (newStatus === 'rejected') body.rejectionReason = reason || rejectionReason;
-      const res = await fetch(`/api/osce-stations/${station._id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/osce-stations/${station._id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -75,13 +100,13 @@ const OsceStationViewModal: React.FC<OsceStationViewModalProps> = (props) => {
       });
       if (!res.ok) throw new Error('Failed to update status');
       let updated = await res.json();
-      updated = { ...updated, type: 'OSCE' };
       setCurrentStation(updated);
       if (onSave) onSave(updated);
       if (onAction) {
-        if (newStatus === 'approved') onAction('success', 'Question accepted successfully');
-        else if (newStatus === 'rejected') onAction('error', 'Question rejected successfully');
-        else onAction('info', 'Question set to pending');
+        // Status change operation successful
+        if (newStatus === 'approved') onAction('approve', 'OSCE station approved successfully', station._id);
+        else if (newStatus === 'rejected') onAction('reject', 'OSCE station rejected successfully', station._id);
+        else onAction('pending', 'OSCE station set to pending', station._id);
       }
       onClose();
     } catch (err: any) {
@@ -125,6 +150,7 @@ const OsceStationViewModal: React.FC<OsceStationViewModalProps> = (props) => {
                   ${currentStation.status === 'approved' ? 'bg-green-100 text-green-700' :
                     currentStation.status === 'rejected' ? 'bg-red-100 text-red-700' :
                     'bg-yellow-100 text-yellow-700'}`}>{currentStation.status}</span></div>
+                <div><span className="font-semibold">Total Marks:</span> <span className="inline-block px-3 py-1 rounded text-sm font-bold bg-blue-100 text-blue-700">{currentStation.totalMarks || 0} points</span></div>
                 <div><span className="font-semibold">Submitted At:</span> {new Date(currentStation.createdAt).toLocaleString()}</div>
                 <div><span className="font-semibold">Last Updated:</span> {new Date(currentStation.updatedAt).toLocaleString()}</div>
               </div>
@@ -149,25 +175,55 @@ const OsceStationViewModal: React.FC<OsceStationViewModalProps> = (props) => {
             )}
             <div>
               <span className="font-semibold">Marking Scheme:</span>
-              <ul className="list-disc ml-6">
-                {currentStation.markingScheme?.map((section: any, idx: number) => (
-                  <li key={idx}><b>{section.section}:</b>
-                    <ul className="list-decimal ml-4">
-                      {section.items.map((item: any, i: number) => (
-                        <li key={i}>{item.desc} ({item.score} mark{item.score !== 1 ? 's' : ''})</li>
-                      ))}
-                    </ul>
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-2 space-y-4">
+                {currentStation.markingScheme?.map((section: any, idx: number) => {
+                  const sectionTotal = section.items?.reduce((sum: number, item: any) => sum + (item.score || 0), 0) || 0;
+                  return (
+                    <div key={idx} className="bg-gray-50 rounded p-4 border">
+                      <div className="flex justify-between items-center mb-2">
+                        <h4 className="font-semibold text-gray-800">{section.section}</h4>
+                        <span className="inline-block px-2 py-1 rounded text-xs font-bold bg-blue-100 text-blue-700">
+                          {sectionTotal} point{sectionTotal !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <ul className="space-y-1">
+                        {section.items?.map((item: any, i: number) => (
+                          <li key={i} className="flex justify-between items-center text-sm">
+                            <span className="text-gray-700">{item.desc}</span>
+                            <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-gray-200 text-gray-700">
+                              {item.score} pt{item.score !== 1 ? 's' : ''}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
             <div>
               <span className="font-semibold">Follow-up Questions:</span>
-              <ul className="list-decimal ml-6">
+              <div className="mt-2 space-y-3">
                 {currentStation.followUps?.map((fq: any, idx: number) => (
-                  <li key={idx}><b>Q:</b> {fq.question}<br /><b>A:</b> {fq.answer}</li>
+                  <div key={idx} className="bg-gray-50 rounded p-4 border">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex-1">
+                        <div className="mb-2">
+                          <span className="font-medium text-gray-800">Q{idx + 1}:</span>
+                          <span className="ml-2 text-gray-700">{fq.question}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-800">Answer:</span>
+                          <span className="ml-2 text-gray-700">{fq.answers ? fq.answers.join(', ') : fq.answer}</span>
+                        </div>
+                      </div>
+                      <span className="inline-block px-2 py-1 rounded text-xs font-bold bg-green-100 text-green-700 ml-3">
+                        {fq.score || 0} pt{(fq.score || 0) !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
             {currentStation.images && currentStation.images.length > 0 && (
               <div>
@@ -206,6 +262,13 @@ const OsceStationViewModal: React.FC<OsceStationViewModalProps> = (props) => {
                   disabled={editLoading || currentStation.status === 'pending'}
                 >
                   <ClockIcon className="w-4 h-4" /> Pending
+                </button>
+                <button
+                  className="bg-red-600 text-white px-4 py-1.5 rounded font-semibold text-xs hover:bg-red-700 transition flex items-center gap-1"
+                  onClick={handleDelete}
+                  disabled={editLoading}
+                >
+                  <TrashIcon className="w-4 h-4" /> Delete
                 </button>
               </div>
             )}

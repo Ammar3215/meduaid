@@ -4,18 +4,24 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email';
+import { AppError, asyncHandler, sendErrorResponse } from '../utils/errorHandler';
 
-export const register: RequestHandler = async (req, res) => {
-  console.log('Signup route hit');
-  try {
-    const { name, email, password } = req.body;
-    // Step 2: Check if user exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      // SECURITY FIX: Don't reveal if user exists, use generic message
-      res.status(400).json({ message: 'Registration failed. Please check your details and try again.' });
-      return;
-    }
+export const register: RequestHandler = asyncHandler(async (req, res) => {
+  const { name, email, password } = req.body;
+  
+  if (!name || !email || !password) {
+    throw new AppError('Name, email, and password are required', 400);
+  }
+  
+  if (password.length < 6) {
+    throw new AppError('Password must be at least 6 characters long', 400);
+  }
+  
+  // Check if user exists
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    throw new AppError('Registration failed. Please check your details and try again.', 400);
+  }
     // Step 3: Generate email verification token
     const emailVerificationToken = crypto.randomBytes(32).toString('hex');
     // Step 4: Hash password and save user
@@ -28,34 +34,35 @@ export const register: RequestHandler = async (req, res) => {
       verified: false,
       role: 'writer',
     });
-    // Log registration event without sensitive data
-    console.log('User registration initiated for email:', email.replace(/(.{2}).*(@.*)/, '$1***$2'));
-    // Send verification email
-    await sendVerificationEmail(email, emailVerificationToken);
-    res.status(201).json({ message: 'Verification email sent. Please check your inbox.' });
-  } catch (err) {
-    console.error('Signup error:', err);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
+  // Registration initiated successfully
+  // Send verification email
+  await sendVerificationEmail(email, emailVerificationToken);
+  res.status(201).json({ 
+    success: true,
+    message: 'Verification email sent. Please check your inbox.' 
+  });
+});
 
-export const login: RequestHandler = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) {
-      res.status(400).json({ message: 'Invalid credentials' });
-      return;
-    }
-    if (!user.verified) {
-      res.status(403).json({ message: 'Please verify your email before logging in.' });
-      return;
-    }
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      res.status(400).json({ message: 'Invalid credentials' });
-      return;
-    }
+export const login: RequestHandler = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  
+  if (!email || !password) {
+    throw new AppError('Email and password are required', 400);
+  }
+  
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new AppError('Invalid credentials', 400);
+  }
+  
+  if (!user.verified) {
+    throw new AppError('Please verify your email before logging in.', 403);
+  }
+  
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch) {
+    throw new AppError('Invalid credentials', 400);
+  }
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET!, { expiresIn: '7d' });
     
     // Set httpOnly cookie instead of sending token in response body
@@ -66,57 +73,48 @@ export const login: RequestHandler = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
     });
     
-    res.json({
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isAdmin: user.role === 'admin',
-        isVerified: user.verified,
-      }
-    });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error' });
-  }
-};
+  res.json({
+    success: true,
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isAdmin: user.role === 'admin',
+      isVerified: user.verified,
+    }
+  });
+});
 
 // Email verification controller
-export const verifyEmail: RequestHandler = async (req, res) => {
-  try {
-    const { token } = req.body;
-    console.log('Email verification attempt received'); // Debug log
-    // 1. Accept token from req.body.token
-    // 2. Check if token is present
-    if (!token || typeof token !== 'string') {
-      res.status(400).json({ message: 'No verification token found.' });
-      return;
-    }
-    // 3. Find user by emailVerificationToken
-    const user = await User.findOne({ emailVerificationToken: token });
-    if (!user) {
-      console.log('Invalid verification token provided'); // Debug log
-      res.status(400).json({ message: 'Invalid or expired token.' });
-      return;
-    }
-    // 4. If already verified, return a clear message
-    if (user.verified) {
-      res.status(200).json({ message: 'Email already verified.' });
-      return;
-    }
-    console.log('Email verification successful for user:', user.email.replace(/(.{2}).*(@.*)/, '$1***$2')); // Debug log
-    // 5. Set verified, clear token, save
-    user.verified = true;
-    user.emailVerificationToken = undefined;
-    await user.save();
-    // 6. Return success message
-    res.json({ message: 'Email verified successfully.' });
-  } catch (err) {
-    // 7. Error handling
-    console.error('Email verification error:', err);
-    res.status(500).json({ message: 'Server error' });
+export const verifyEmail: RequestHandler = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+  
+  if (!token || typeof token !== 'string') {
+    throw new AppError('No verification token found.', 400);
   }
-};
+  
+  const user = await User.findOne({ emailVerificationToken: token });
+  if (!user) {
+    throw new AppError('Invalid or expired token.', 400);
+  }
+  
+  if (user.verified) {
+    return res.status(200).json({ 
+      success: true,
+      message: 'Email already verified.' 
+    });
+  }
+  
+  user.verified = true;
+  user.emailVerificationToken = undefined;
+  await user.save();
+  
+  res.json({ 
+    success: true,
+    message: 'Email verified successfully.' 
+  });
+});
 
 // Change Email
 export const changeEmail: RequestHandler = async (req, res) => {
@@ -145,7 +143,7 @@ export const changeEmail: RequestHandler = async (req, res) => {
     // Optionally, sendVerificationEmail(newEmail, ...)
     res.json({ message: 'Email updated successfully.' });
   } catch (err) {
-    console.error('Change email error:', err);
+    // Change email error occurred
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -177,7 +175,7 @@ export const changePassword: RequestHandler = async (req, res) => {
     await user.save();
     res.json({ message: 'Password updated successfully.' });
   } catch (err) {
-    console.error('Change password error:', err);
+    // Change password error occurred
     res.status(500).json({ message: 'Server error' });
   }
 };

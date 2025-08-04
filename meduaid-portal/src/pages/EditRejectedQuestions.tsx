@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL } from '../config/api';
 
 type EditFormInputs = {
   question: string;
@@ -34,7 +35,6 @@ const EditQuestions: React.FC = () => {
     },
   });
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
   useEffect(() => {
     const fetchRejected = async () => {

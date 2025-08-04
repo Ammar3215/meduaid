@@ -5,6 +5,7 @@ import QuestionViewModal from '../components/QuestionViewModal';
 import Skeleton from '../components/Skeleton';
 import AdminEditQuestionForm from '../components/AdminEditQuestionForm';
 import OsceStationViewModal from '../components/OsceStationViewModal';
+import { API_BASE_URL } from '../config/api';
 
 const COLORS = [
   '#4B47B6', // deep purple
@@ -43,10 +44,9 @@ const AnimatedCounter = ({ value, className = '' }: { value: number, className?:
   return <div className={className}>{display.toLocaleString()}</div>;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
 const AdminDashboard: React.FC = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [stats, setStats] = useState<any>(null);
   const [penalties, setPenalties] = useState<any[]>([]);
   const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
@@ -93,6 +93,8 @@ const AdminDashboard: React.FC = () => {
   const [editLoading, setEditLoading] = useState(false);
 
   const [loading, setLoading] = useState(true);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -413,6 +415,7 @@ const AdminDashboard: React.FC = () => {
                   <th className="px-4 py-2 w-[300px] font-semibold text-gray-700">Question</th>
                   <th className="px-4 py-2 w-[160px] font-semibold text-gray-700">Subject</th>
                   <th className="px-4 py-2 w-[160px] font-semibold text-gray-700">Topic</th>
+                  <th className="px-4 py-2 w-[100px] font-semibold text-gray-700">Total Marks</th>
                   <th className="px-4 py-2 w-[100px] font-semibold text-gray-700">Status</th>
                   <th className="px-4 py-2 w-[100px] font-semibold text-gray-700">Actions</th>
                 </tr>
@@ -425,6 +428,13 @@ const AdminDashboard: React.FC = () => {
                     <td className="px-4 py-2 w-[300px] max-w-[300px] truncate overflow-hidden whitespace-nowrap" title={q.type === 'OSCE' ? q.title : q.question}>{q.type === 'OSCE' ? q.title : q.question}</td>
                     <td className="px-4 py-2 w-[160px] whitespace-nowrap">{q.subject}</td>
                     <td className="px-4 py-2 w-[160px] whitespace-nowrap">{q.topic}</td>
+                    <td className="px-4 py-2 w-[100px] whitespace-nowrap text-center">
+                      {q.type === 'OSCE' ? (
+                        <span className="inline-block px-2 py-1 rounded text-xs font-bold bg-blue-100 text-blue-700">
+                          {q.totalMarks || 0} pts
+                        </span>
+                      ) : '-'}
+                    </td>
                     <td className="px-4 py-2 w-[100px]">
                       {/* Status badge */}
                       <span className={`inline-block px-2 py-1 rounded text-xs font-bold
@@ -459,6 +469,51 @@ const AdminDashboard: React.FC = () => {
               station={selectedSubmission}
               loading={modalLoading}
               error={modalError}
+              user={user}
+              onSave={updated => {
+                const updatedWithType = { ...updated, type: 'OSCE' };
+                setStats((prev: any) => {
+                  if (!prev) return prev;
+                  const updatedSubmissions = prev.allSubmissions.map((q: any) =>
+                    q._id === updatedWithType._id ? updatedWithType : q
+                  );
+                  return { ...prev, allSubmissions: updatedSubmissions };
+                });
+                setSelectedSubmission(updatedWithType);
+              }}
+              onAction={(type, message, itemId) => {
+                // onAction triggered
+                if (type === 'delete' && itemId) {
+                  // Remove deleted item from stats
+                  setStats((prev: any) => {
+                    if (!prev) return prev;
+                    const updatedSubmissions = prev.allSubmissions.filter((q: any) => q._id !== itemId);
+                    // Delete operation on submissions
+                    return { ...prev, allSubmissions: updatedSubmissions };
+                  });
+                  setModalOpen(false);
+                  setSuccessMessage(message);
+                  setTimeout(() => setSuccessMessage(''), 3000);
+                } else if (type === 'approve' || type === 'reject' || type === 'pending') {
+                  // Update item status in stats
+                  if (itemId) {
+                    const newStatus = type === 'approve' ? 'approved' : type === 'reject' ? 'rejected' : 'pending';
+                    setStats((prev: any) => {
+                      if (!prev) return prev;
+                      const updatedSubmissions = prev.allSubmissions.map((q: any) =>
+                        q._id === itemId ? { ...q, status: newStatus } : q
+                      );
+                      // Status update operation
+                      return { ...prev, allSubmissions: updatedSubmissions };
+                    });
+                  }
+                  setSuccessMessage(message);
+                  setTimeout(() => setSuccessMessage(''), 3000);
+                } else if (type === 'error') {
+                  setError(message);
+                  setTimeout(() => setError(''), 3000);
+                }
+              }}
             />
           ) : (
             <QuestionViewModal
@@ -564,6 +619,20 @@ const AdminDashboard: React.FC = () => {
           </tbody>
         </table>
       </div>
+      
+      {/* Success Message */}
+      {successMessage && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-2 rounded shadow-lg z-50 text-center">
+          {successMessage}
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-2 rounded shadow-lg z-50 text-center">
+          {error}
+        </div>
+      )}
     </div>
   );
 };

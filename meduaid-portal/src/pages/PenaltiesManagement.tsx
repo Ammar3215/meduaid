@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config/api';
 
 interface Penalty {
   _id: string;
@@ -39,7 +40,6 @@ const PenaltiesManagement: React.FC = () => {
   const [reasonError, setReasonError] = useState('');
   const [amountError, setAmountError] = useState('');
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
   useEffect(() => {
     if (user && !user.isAdmin) {

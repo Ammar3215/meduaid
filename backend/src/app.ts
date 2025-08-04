@@ -7,6 +7,7 @@ import submissionsRoutes from './routes/submissions';
 import adminRoutes from './routes/admin';
 import writerRoutes from './routes/writer';
 import osceStationsRoutes from './routes/osceStations';
+import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler';
 import path from 'path';
 
 const app = express();
@@ -82,5 +83,9 @@ app.use('/api/submissions', submissionsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/writer', writerRoutes);
 app.use('/api/osce-stations', osceStationsRoutes);
+
+// Error handling middleware (must be last)
+app.use(notFoundHandler);
+app.use(globalErrorHandler);
 
 export default app;

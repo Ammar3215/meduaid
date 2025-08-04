@@ -146,7 +146,7 @@ const updateSubmissionStatus = (req, res) => __awaiter(void 0, void 0, void 0, f
             // Validate status value if present
             const allowedStatuses = ['pending', 'approved', 'rejected'];
             if (status && !allowedStatuses.includes(status)) {
-                console.log('Invalid status value received:', status);
+                // Invalid status value received
                 res.status(400).json({ message: 'Invalid status value' });
                 return;
             }
@@ -164,9 +164,9 @@ const updateSubmissionStatus = (req, res) => __awaiter(void 0, void 0, void 0, f
                 updateObj.status = status;
             if (rejectionReason !== undefined)
                 updateObj.rejectionReason = rejectionReason;
-            console.log('PATCH admin:', { id, updateObj });
+            // Admin PATCH request processed
             const updated = yield Submission_1.default.findByIdAndUpdate(id, updateObj, { new: true });
-            console.log('Updated submission:', updated);
+            // Submission updated successfully
             res.json(updated);
             return;
         }

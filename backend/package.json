@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node dist/server.js",
     "dev": "nodemon src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "migrate:osce": "ts-node src/utils/migrateOsceStations.ts"
   },
   "keywords": [],
   "author": "",
