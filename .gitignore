@@ -1,9 +1,6 @@
 # Environment files
 .env
-.env.local
-.env.production
-.env.development
-!.env.example
+.env.*
 
 # Node modules
 node_modules/
