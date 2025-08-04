@@ -1,3 +1,10 @@
+# Environment files
+.env
+.env.local
+.env.production
+.env.development
+!.env.example
+
 # Node modules
 node_modules/
 
@@ -10,13 +17,6 @@ out/
 logs/
 *.log
 
-# Environment files
-.env
-.env.local
-.env.production
-.env.development
-!.env.example
-
 # Editor directories and files
 .vscode/
 .idea/
@@ -26,7 +26,9 @@ logs/
 *.njsproj
 *.sln
 *.sw?
-*.claude
 
 # OS files
-Thumbs.db 
+Thumbs.db
+
+# Local development files
+*.local
