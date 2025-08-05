@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { apiGet } from '../utils/api';
 import { subjectsStructure } from '../utils/subjectsStructure';
 import ReactDOM from 'react-dom';
 import { ExclamationCircleIcon } from '@heroicons/react/24/outline';
@@ -81,19 +82,11 @@ const Dashboard: React.FC = () => {
       try {
         // Use appropriate endpoint based on user role
         const endpoint = user?.isAdmin ? '/api/admin/stats' : '/api/writer/stats';
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-          credentials: 'include',
-        });
-        if (!response.ok) {
-          setError('Failed to fetch stats');
-          setLoading(false);
-          return;
-        }
-        const data = await response.json();
+        const data = await apiGet(endpoint);
         setStats(data);
         // Do not set selectedSubject here; default is 'All'
-      } catch {
-        setError('Network error');
+      } catch (error) {
+        setError('Failed to fetch stats');
       }
       setLoading(false);
     };
@@ -101,14 +94,11 @@ const Dashboard: React.FC = () => {
       try {
         // Use appropriate endpoint based on user role
         const endpoint = user?.isAdmin ? '/api/admin/penalties' : '/api/writer/penalties';
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-          credentials: 'include',
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setPenalties(data.penalties || []);
-        }
-      } catch {}
+        const data = await apiGet(endpoint);
+        setPenalties(data.penalties || []);
+      } catch (error) {
+        // Silently handle penalties fetch error
+      }
     };
     if (isAuthenticated && user) {
       fetchStats();
@@ -136,25 +126,15 @@ const Dashboard: React.FC = () => {
     setSelectedSubmission(null);
     setModalOpen(true);
     try {
-      let res;
+      let data;
       if (type === 'OSCE') {
-        res = await fetch(`${API_BASE_URL}/api/osce-stations/${id}`, {
-          credentials: 'include',
-        });
+        data = await apiGet(`/api/osce-stations/${id}`);
       } else {
-        res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
-          credentials: 'include',
-        });
+        data = await apiGet(`/api/submissions/${id}`);
       }
-      if (!res.ok) {
-        setModalError('Failed to fetch submission.');
-        setModalLoading(false);
-        return;
-      }
-      const data = await res.json();
       setSelectedSubmission({ ...data, type });
-    } catch (err) {
-      setModalError('Network error.');
+    } catch (error) {
+      setModalError('Failed to fetch submission.');
     }
     setModalLoading(false);
   };

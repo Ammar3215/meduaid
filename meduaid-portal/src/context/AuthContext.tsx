@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { API_BASE_URL } from '../config/api';
+import { apiPost } from '../utils/api';
 
 interface User {
   email: string;
@@ -45,17 +46,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email, password }),
-      });
-      if (!response.ok) return false;
-      const data = await response.json();
-      setUser(data.user);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      return true;
+      const response = await apiPost(`${API_BASE_URL}/api/auth/login`, { email, password });
+      if (response.success) {
+        setUser(response.data.user);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        return true;
+      }
+      return false;
     } catch {
       return false;
     }
@@ -63,17 +60,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signup = async (email: string, password: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ name: email.split('@')[0], email, password }),
-      });
-      if (!response.ok) return false;
-      const data = await response.json();
-      setUser(data.user);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      return true;
+      const response = await apiPost(`${API_BASE_URL}/api/auth/register`, { name: email.split('@')[0], email, password });
+      if (response.success) {
+        setUser(response.data.user);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        return true;
+      }
+      return false;
     } catch {
       return false;
     }
@@ -93,10 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     try {
       // Call backend logout to clear httpOnly cookie
-      await fetch(`${API_BASE_URL}/api/auth/logout`, {
-        method: 'POST',
-        credentials: 'include'
-      });
+      await apiPost(`${API_BASE_URL}/api/auth/logout`);
     } catch (error) {
       // Logout request failed
     }
