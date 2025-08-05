@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { API_BASE_URL } from '../config/api';
 import { apiPost } from '../utils/api';
 
 interface User {
@@ -46,10 +45,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await apiPost(`${API_BASE_URL}/api/auth/login`, { email, password });
+      const response = await apiPost('/api/auth/login', { email, password });
       if (response.success) {
-        setUser(response.data.user);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
+        setUser(response.user);
+        localStorage.setItem('user', JSON.stringify(response.user));
         return true;
       }
       return false;
@@ -60,10 +59,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signup = async (email: string, password: string) => {
     try {
-      const response = await apiPost(`${API_BASE_URL}/api/auth/register`, { name: email.split('@')[0], email, password });
+      const response = await apiPost('/api/auth/register', { name: email.split('@')[0], email, password });
       if (response.success) {
-        setUser(response.data.user);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
+        // For registration, we don't get user data back immediately
+        // The user needs to verify their email first
         return true;
       }
       return false;
@@ -86,9 +85,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     try {
       // Call backend logout to clear httpOnly cookie
-      await apiPost(`${API_BASE_URL}/api/auth/logout`);
+      await apiPost('/api/auth/logout');
     } catch (error) {
-      // Logout request failed
+      // Logout request failed - continue with local cleanup anyway
     }
     
     setUser(null);
