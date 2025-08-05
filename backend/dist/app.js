@@ -30,14 +30,26 @@ app.use((0, cors_1.default)({
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     credentials: true,
+    optionsSuccessStatus: 200, // Some legacy browsers choke on 204
 }));
-app.use(express_1.default.json());
+// Add mobile-friendly headers
+app.use((req, res, next) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    next();
+});
+app.use(express_1.default.json({ limit: '10mb' }));
+app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
 app.use((0, cookie_parser_1.default)());
 app.use('/uploads', express_1.default.static(path_1.default.join(__dirname, '../uploads')));
 // Rate limiting configurations
 const authLimiter = (0, express_rate_limit_1.default)({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10, // 10 attempts per window per IP
+    max: 20, // Increased from 10 to 20 attempts per window per IP
     message: {
         error: 'Too many authentication attempts. Please try again in 15 minutes.'
     },
@@ -46,7 +58,7 @@ const authLimiter = (0, express_rate_limit_1.default)({
 });
 const strictAuthLimiter = (0, express_rate_limit_1.default)({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // 5 attempts per window per IP for sensitive operations
+    max: 10, // Increased from 5 to 10 attempts per window per IP for sensitive operations
     message: {
         error: 'Too many failed attempts. Please try again in 15 minutes.'
     },
@@ -55,7 +67,7 @@ const strictAuthLimiter = (0, express_rate_limit_1.default)({
 });
 const generalLimiter = (0, express_rate_limit_1.default)({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // 100 requests per window per IP
+    max: 200, // Increased from 100 to 200 requests per window per IP
     message: {
         error: 'Too many requests. Please try again later.'
     },
@@ -69,6 +81,8 @@ app.use('/api/auth/forgot-password', strictAuthLimiter);
 app.use('/api/auth/reset-password', strictAuthLimiter);
 app.use('/api/auth', authLimiter);
 app.use('/api', generalLimiter);
+// Apply timeout handler for mobile devices
+app.use((0, errorHandler_1.timeoutHandler)(30000)); // 30 seconds timeout
 app.get('/', (req, res) => {
     res.send('MeduAid QB Portal Backend is running');
 });

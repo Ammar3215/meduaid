@@ -13,10 +13,38 @@ export const globalErrorHandler = (err: any, req: Request, res: Response, next: 
     }
   }
 
+  // Mobile-specific error handling
+  const userAgent = req.get('User-Agent') || '';
+  const isMobile = /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+  
+  if (isMobile) {
+    // Add mobile-specific headers for better error handling
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+  }
+
   sendErrorResponse(res, err, 'Something went wrong');
 };
 
 export const notFoundHandler = (req: Request, res: Response, next: NextFunction) => {
   const error = new AppError(`Route ${req.originalUrl} not found`, 404);
   next(error);
+};
+
+// Add timeout handler for mobile devices
+export const timeoutHandler = (timeout: number = 30000) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const userAgent = req.get('User-Agent') || '';
+    const isMobile = /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+    
+    if (isMobile) {
+      // Increase timeout for mobile devices
+      req.setTimeout(timeout * 2, () => {
+        console.error('Request timeout on mobile device');
+        res.status(408).json({ error: 'Request timeout. Please try again.' });
+      });
+    }
+    
+    next();
+  };
 };

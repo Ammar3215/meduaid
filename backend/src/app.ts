@@ -7,7 +7,7 @@ import submissionsRoutes from './routes/submissions';
 import adminRoutes from './routes/admin';
 import writerRoutes from './routes/writer';
 import osceStationsRoutes from './routes/osceStations';
-import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler';
+import { globalErrorHandler, notFoundHandler, timeoutHandler } from './middleware/errorHandler';
 import path from 'path';
 
 const app = express();
@@ -29,16 +29,30 @@ app.use(
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     credentials: true,
+    optionsSuccessStatus: 200, // Some legacy browsers choke on 204
   })
 );
-app.use(express.json());
+
+// Add mobile-friendly headers
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Rate limiting configurations
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 attempts per window per IP
+  max: 20, // Increased from 10 to 20 attempts per window per IP
   message: {
     error: 'Too many authentication attempts. Please try again in 15 minutes.'
   },
@@ -48,7 +62,7 @@ const authLimiter = rateLimit({
 
 const strictAuthLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts per window per IP for sensitive operations
+  max: 10, // Increased from 5 to 10 attempts per window per IP for sensitive operations
   message: {
     error: 'Too many failed attempts. Please try again in 15 minutes.'
   },
@@ -58,7 +72,7 @@ const strictAuthLimiter = rateLimit({
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window per IP
+  max: 200, // Increased from 100 to 200 requests per window per IP
   message: {
     error: 'Too many requests. Please try again later.'
   },
@@ -73,6 +87,9 @@ app.use('/api/auth/forgot-password', strictAuthLimiter);
 app.use('/api/auth/reset-password', strictAuthLimiter);
 app.use('/api/auth', authLimiter);
 app.use('/api', generalLimiter);
+
+// Apply timeout handler for mobile devices
+app.use(timeoutHandler(30000)); // 30 seconds timeout
 
 app.get('/', (req, res) => {
   res.send('MeduAid QB Portal Backend is running');
