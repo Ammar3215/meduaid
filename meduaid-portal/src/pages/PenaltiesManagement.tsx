@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { API_BASE_URL } from '../config/api';
+import { apiGet, apiPost, apiDelete } from '../utils/api';
 
 interface Penalty {
   _id: string;
@@ -51,20 +51,11 @@ const PenaltiesManagement: React.FC = () => {
       setLoading(true);
       setError('');
       try {
-        // Fetch writers
-        const writersRes = await fetch(`${API_BASE_URL}/api/admin/writers`, {
-          credentials: 'include',
-        });
-        if (!writersRes.ok) throw new Error('Failed to fetch writers.');
-        const writersData = await writersRes.json();
+        // Fetch writers and penalties
+        const writersData = await apiGet('/api/admin/writers');
         setWriters(writersData);
-
-        // Fetch penalties
-        const penaltiesRes = await fetch(`${API_BASE_URL}/api/admin/penalties`, {
-          credentials: 'include',
-        });
-        if (!penaltiesRes.ok) throw new Error('Failed to fetch penalties.');
-        const penaltiesData = await penaltiesRes.json();
+        
+        const penaltiesData = await apiGet('/api/admin/penalties');
         setPenalties(penaltiesData.penalties || []);
         
       } catch (err: any) {
@@ -99,24 +90,12 @@ const PenaltiesManagement: React.FC = () => {
     if (hasError) return;
     setError('');
     try {
-      const res = await fetch(`${API_BASE_URL}/api/admin/penalties`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          writer: selectedWriter,
-          reason,
-          type: penaltyType,
-          ...(penaltyType === 'monetary' ? { amount: Number(amount) } : {})
-        }),
+      const newPenalty = await apiPost('/api/admin/penalties', {
+        writer: selectedWriter,
+        reason,
+        type: penaltyType,
+        ...(penaltyType === 'monetary' ? { amount: Number(amount) } : {})
       });
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || 'Failed to apply penalty.');
-      }
-      const newPenalty = await res.json();
       setPenalties([newPenalty, ...penalties]);
       // Reset form
       setSelectedWriter('');
@@ -130,11 +109,7 @@ const PenaltiesManagement: React.FC = () => {
 
   const handleRemovePenalty = async (id: string) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/admin/penalties/${id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to remove penalty.');
+      await apiDelete(`/api/admin/penalties/${id}`);
       setPenalties(penalties.filter(p => p._id !== id));
     } catch (err: any) {
       setError(err.message);

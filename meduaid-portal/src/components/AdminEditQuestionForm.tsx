@@ -1,6 +1,7 @@
 import React from 'react';
 import { subjectsStructure } from '../utils/subjectsStructure';
 import { API_BASE_URL } from '../config/api';
+import { apiPatch } from '../utils/api';
 
 
 function AdminEditQuestionForm({ submission, onClose, onSave }: { submission: any, onClose: () => void, onSave: (updated: any) => void }) {
@@ -55,23 +56,10 @@ function AdminEditQuestionForm({ submission, onClose, onSave }: { submission: an
         reference: form.reference,
         difficulty: form.difficulty,
       };
-      const res = await fetch(`${API_BASE_URL}/api/submissions/${form._id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        setError('Failed to save changes');
-        setSaving(false);
-        return;
-      }
-      const updated = await res.json();
+      const updated = await apiPatch(`/api/submissions/${form._id}`, payload);
       onSave(updated);
-    } catch {
-      setError('Network error');
+    } catch (err: any) {
+      setError(err.message || 'Network error');
     }
     setSaving(false);
   };

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config/api';
+import { apiGet, apiPatch, apiUpload } from '../utils/api';
 
 type EditFormInputs = {
   question: string;
@@ -41,11 +42,7 @@ const EditQuestions: React.FC = () => {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`${API_BASE_URL}/api/submissions?status=rejected`, {
-          credentials: 'include',
-        });
-        if (!res.ok) throw new Error('Failed to fetch rejected questions');
-        const data = await res.json();
+        const data = await apiGet('/api/submissions?status=rejected');
         setRejected(Array.isArray(data) ? data : data.submissions || []);
       } catch (err: any) {
         setError(err.message || 'Network error');
@@ -100,29 +97,16 @@ const EditQuestions: React.FC = () => {
         data.explanations.forEach((e, i) => formData.append(`explanations[${i}]`, e));
         formData.append('reference', data.reference);
         formData.append('status', 'pending');
-        const res = await fetch(`${API_BASE_URL}/api/submissions/${editingId}`, {
-          method: 'PATCH',
-          credentials: 'include',
-          body: formData,
-        });
-        if (!res.ok) throw new Error('Failed to resubmit question');
+        await apiUpload(`/api/submissions/${editingId}`, formData, { method: 'PATCH' });
       } else {
         // No image change
-        const res = await fetch(`${API_BASE_URL}/api/submissions/${editingId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            question: data.question,
-            choices: data.choices,
-            explanations: data.explanations,
-            reference: data.reference,
-            status: 'pending',
-          }),
+        await apiPatch(`/api/submissions/${editingId}`, {
+          question: data.question,
+          choices: data.choices,
+          explanations: data.explanations,
+          reference: data.reference,
+          status: 'pending',
         });
-        if (!res.ok) throw new Error('Failed to resubmit question');
       }
       setRejected(prev => prev.filter(q => q._id !== editingId));
       setSubmitted(true);

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import OsceStationEditModal from './OsceStationEditModal';
 import { useAuth } from '../context/AuthContext';
 import { CheckCircleIcon, XCircleIcon, ClockIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { API_BASE_URL } from '../config/api';
+import { apiPatch, apiDelete } from '../utils/api';
 
 interface OsceStationViewModalProps {
   open: boolean;
@@ -36,16 +36,7 @@ const OsceStationViewModal: React.FC<OsceStationViewModalProps> = (props) => {
     setEditLoading(true);
     setEditError('');
     try {
-      const res = await fetch(`${API_BASE_URL}/api/osce-stations/${station._id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error('Failed to update OSCE station');
-      let updated = await res.json();
+      let updated = await apiPatch(`/api/osce-stations/${station._id}`, data);
       setCurrentStation(updated);
       setEditOpen(false);
       if (onSave) onSave(updated);
@@ -63,11 +54,7 @@ const OsceStationViewModal: React.FC<OsceStationViewModalProps> = (props) => {
     setEditLoading(true);
     setEditError('');
     try {
-      const res = await fetch(`${API_BASE_URL}/api/osce-stations/${station._id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to delete OSCE station');
+      await apiDelete(`/api/osce-stations/${station._id}`);
       // Delete operation successful
       if (onAction) {
         onAction('delete', 'OSCE station deleted successfully', station._id);
@@ -90,16 +77,7 @@ const OsceStationViewModal: React.FC<OsceStationViewModalProps> = (props) => {
     try {
       const body: any = { status: newStatus };
       if (newStatus === 'rejected') body.rejectionReason = reason || rejectionReason;
-      const res = await fetch(`${API_BASE_URL}/api/osce-stations/${station._id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error('Failed to update status');
-      let updated = await res.json();
+      let updated = await apiPatch(`/api/osce-stations/${station._id}`, body);
       setCurrentStation(updated);
       if (onSave) onSave(updated);
       if (onAction) {

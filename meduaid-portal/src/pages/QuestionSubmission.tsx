@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { subjectsStructure } from '../utils/subjectsStructure';
 import { ClipboardDocumentListIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import { API_BASE_URL } from '../config/api';
+import { apiPost, apiUpload } from '../utils/api';
 
 const questionSchema = z.object({
   category: z.string().nonempty('Please select a category.'),
@@ -130,13 +131,7 @@ const QuestionSubmission: React.FC = () => {
   const uploadImages = async (files: FileList): Promise<string[]> => {
     const formData = new FormData();
     Array.from(files).forEach(file => formData.append('images', file));
-    const res = await fetch(`${API_BASE_URL}/api/submissions/upload`, {
-      method: 'POST',
-      credentials: 'include',
-      body: formData,
-    });
-    if (!res.ok) throw new Error('Image upload failed');
-    const data = await res.json();
+    const data = await apiUpload('/api/submissions/upload', formData);
     return data.urls;
   };
 
@@ -174,19 +169,7 @@ const QuestionSubmission: React.FC = () => {
         images: imageUrls,
         correctChoice: data.correctChoice,
       };
-      const response = await fetch(`${API_BASE_URL}/api/submissions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        setError('Failed to submit question');
-        setLoading(false);
-        return;
-      }
+      await apiPost('/api/submissions', payload);
       setSuccess(true);
       resetQuestionFields();
       setTimeout(() => setSuccess(false), 1500);
@@ -220,19 +203,7 @@ const QuestionSubmission: React.FC = () => {
         status: 'draft',
         correctChoice: data.correctChoice,
       };
-      const response = await fetch(`${API_BASE_URL}/api/submissions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        setError('Failed to save draft');
-        setLoading(false);
-        return;
-      }
+      await apiPost('/api/submissions', payload);
       setDraftSuccess(true);
       setTimeout(() => setDraftSuccess(false), 1500);
     } catch {
@@ -365,15 +336,7 @@ const QuestionSubmission: React.FC = () => {
         images: osceImagePreviews, // (handle upload if needed)
         status: 'pending',
       };
-      const res = await fetch(`${API_BASE_URL}/api/osce-stations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error('Failed to submit OSCE station');
+      await apiPost('/api/osce-stations', payload);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 2000);
       // Reset form
@@ -431,15 +394,7 @@ const QuestionSubmission: React.FC = () => {
         images: osceImagePreviews, // (handle upload if needed)
         status: 'draft',
       };
-      const res = await fetch(`${API_BASE_URL}/api/osce-stations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error('Failed to save draft');
+      await apiPost('/api/osce-stations', payload);
       setDraftSuccess(true);
       setTimeout(() => setDraftSuccess(false), 2000);
     } catch (err: any) {

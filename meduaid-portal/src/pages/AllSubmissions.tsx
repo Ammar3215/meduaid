@@ -6,6 +6,7 @@ import { TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
 import OsceStationViewModal from '../components/OsceStationViewModal';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
+import { apiGet } from '../utils/api';
 
 interface Submission {
   _id: string;
@@ -143,15 +144,8 @@ const AllSubmissions: React.FC = () => {
       setLoading(true);
       setError('');
       try {
-        const sbaRes = await fetch(`${API_BASE_URL}/api/submissions`, {
-          credentials: 'include',
-        });
-        const osceRes = await fetch(`${API_BASE_URL}/api/osce-stations`, {
-          credentials: 'include',
-        });
-        if (!sbaRes.ok || !osceRes.ok) throw new Error('Failed to fetch submissions');
-        const sba = (await sbaRes.json()).map((q: any) => ({ ...q, type: 'SBA' }));
-        const osce = (await osceRes.json()).map((q: any) => ({ ...q, type: 'OSCE' }));
+        const sba = (await apiGet('/api/submissions')).map((q: any) => ({ ...q, type: 'SBA' }));
+        const osce = (await apiGet('/api/osce-stations')).map((q: any) => ({ ...q, type: 'OSCE' }));
         const allSubmissions = [...sba, ...osce].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         
         setSubmissions(allSubmissions);
@@ -171,32 +165,21 @@ const AllSubmissions: React.FC = () => {
     setModalOpen(true);
     
     try {
-      let res;
+      let data;
       if (type === 'OSCE') {
-        res = await fetch(`${API_BASE_URL}/api/osce-stations/${id}`, {
-          credentials: 'include',
-        });
+        data = await apiGet(`/api/osce-stations/${id}`);
       } else {
-        res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
-          credentials: 'include',
-        });
+        data = await apiGet(`/api/submissions/${id}`);
       }
-      
-      if (!res.ok) {
-        if (res.status === 403) {
-          setModalError('You do not have permission to view this submission. This may be because it belongs to another user.');
-        } else if (res.status === 404) {
-          setModalError('Submission not found.');
-        } else {
-          setModalError('Failed to fetch submission.');
-        }
-        setModalLoading(false);
-        return;
-      }
-      const data = await res.json();
       setSelectedSubmission({ ...data, type });
-    } catch (err) {
-      setModalError('Network error.');
+    } catch (err: any) {
+      if (err.message.includes('403')) {
+        setModalError('You do not have permission to view this submission. This may be because it belongs to another user.');
+      } else if (err.message.includes('404')) {
+        setModalError('Submission not found.');
+      } else {
+        setModalError('Failed to fetch submission.');
+      }
     }
     setModalLoading(false);
   };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { API_BASE_URL } from '../config/api';
+import { apiPatch } from '../utils/api';
 
 const Settings: React.FC = () => {
   const { user, setUser } = useAuth();
@@ -31,24 +31,12 @@ const Settings: React.FC = () => {
     setMessage('');
     setError('');
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/update-profile`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(userData),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        setError(data.message || 'Failed to update profile.');
-      } else {
-        setMessage('Profile updated successfully!');
-        setUser(data.user); 
-        localStorage.setItem('user', JSON.stringify(data.user));
-      }
-    } catch (err) {
-      setError('A network error occurred.');
+      const data = await apiPatch('/api/auth/update-profile', userData);
+      setMessage('Profile updated successfully!');
+      setUser(data.user); 
+      localStorage.setItem('user', JSON.stringify(data.user));
+    } catch (err: any) {
+      setError(err.message || 'A network error occurred.');
     } finally {
       setLoading(false);
     }
@@ -72,25 +60,13 @@ const Settings: React.FC = () => {
     }
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError(data.message || 'Failed to change password.');
-      } else {
-        setMessage('Password updated successfully!');
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-      }
-    } catch {
-      setError('Network error.');
+      await apiPatch('/api/auth/change-password', { currentPassword, newPassword });
+      setMessage('Password updated successfully!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      setError(err.message || 'Network error.');
     }
     setLoading(false);
   };

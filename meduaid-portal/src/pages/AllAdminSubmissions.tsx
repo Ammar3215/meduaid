@@ -6,6 +6,7 @@ import QuestionViewModal from '../components/QuestionViewModal';
 import OsceStationViewModal from '../components/OsceStationViewModal';
 import AdminEditQuestionForm from '../components/AdminEditQuestionForm';
 import { API_BASE_URL } from '../config/api';
+import { apiGet, apiPatch, apiDelete } from '../utils/api';
 
 const allCategories = ['All', ...Object.keys(subjectsStructure)];
 
@@ -101,11 +102,7 @@ const AllAdminSubmissions: React.FC = () => {
       setError('');
       try {
         if (type === 'OSCE') {
-          const res = await fetch(`${API_BASE_URL}/api/osce-stations`, {
-            credentials: 'include',
-          });
-          if (!res.ok) throw new Error('Failed to fetch OSCE stations');
-          const data = await res.json();
+          const data = await apiGet('/api/osce-stations');
           // Add type field to OSCE questions and set them for display
           const osceWithType = data.map((q: any) => ({ ...q, type: 'OSCE' }));
           setQuestions(osceWithType);
@@ -114,11 +111,7 @@ const AllAdminSubmissions: React.FC = () => {
           const uniqueWriters: string[] = Array.from(new Set(data.map((q: any) => q.writer?.name).filter((n: any): n is string => Boolean(n))));
           setWriters(uniqueWriters);
         } else if (type === 'All') {
-          const res = await fetch(`${API_BASE_URL}/api/admin/all-submissions`, {
-            credentials: 'include',
-          });
-          if (!res.ok) throw new Error('Failed to fetch all submissions');
-          const data = await res.json();
+          const data = await apiGet('/api/admin/all-submissions');
           // Split into SBA and OSCE for filtering, but keep all for display
           setQuestions(data.submissions.filter((q: any) => q.type === 'SBA'));
           // setOsceStations(data.submissions.filter((q: any) => q.type === 'OSCE')); // This line was removed
@@ -127,15 +120,7 @@ const AllAdminSubmissions: React.FC = () => {
           const uniqueWriters: string[] = Array.from(new Set(data.submissions.map((q: any) => q.writer?.name).filter((n: any): n is string => Boolean(n))));
           setWriters(uniqueWriters);
         } else {
-          const response = await fetch(`${API_BASE_URL}/api/submissions`, {
-            credentials: 'include',
-          });
-          if (!response.ok) {
-            setError('Failed to fetch submissions');
-            setLoading(false);
-            return;
-          }
-          const data = await response.json();
+          const data = await apiGet('/api/submissions');
           const sbaWithType = (Array.isArray(data) ? data : data.submissions || []).map((q: any) => ({ ...q, type: 'SBA' }));
           setQuestions(sbaWithType);
           setAllQuestions(sbaWithType);
@@ -161,18 +146,10 @@ const AllAdminSubmissions: React.FC = () => {
   };
   const handleSaveReason = async (id: string, reason: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ status: 'rejected', rejectionReason: reason }),
-      });
-      if (response.ok) {
-        setQuestions(prev => prev.map(q => q._id === id ? { ...q, status: 'rejected', rejectionReason: reason } : q));
-      }
-    } catch {}
+      await apiPatch(`/api/submissions/${id}`, { status: 'rejected', rejectionReason: reason });
+      setQuestions(prev => prev.map(q => q._id === id ? { ...q, status: 'rejected', rejectionReason: reason } : q));
+    } catch (err: any) {
+      setError(err.message || 'Network error');
   };
 
   // Handle View button click
@@ -183,25 +160,12 @@ const AllAdminSubmissions: React.FC = () => {
     setModalOpen(true);
     setModalMode('view');
     try {
-      let res;
-      if (type === 'OSCE') {
-        res = await fetch(`${API_BASE_URL}/api/osce-stations/${id}`, {
-          credentials: 'include',
-        });
-      } else {
-        res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
-          credentials: 'include',
-        });
-      }
-      if (!res.ok) {
-        setModalError('Failed to fetch submission.');
-        setModalLoading(false);
-        return;
-      }
-      const data = await res.json();
+      const data = type === 'OSCE' 
+        ? await apiGet(`/api/osce-stations/${id}`)
+        : await apiGet(`/api/submissions/${id}`);
       setSelectedSubmission(data);
-    } catch (err) {
-      setModalError('Network error.');
+    } catch (err: any) {
+      setModalError(err.message || 'Network error.');
     }
     setModalLoading(false);
   };
@@ -212,18 +176,8 @@ const AllAdminSubmissions: React.FC = () => {
     if (!window.confirm(`Are you sure you want to delete this ${itemType}? This action cannot be undone.`)) return;
     setError('');
     try {
-      let endpoint;
-      if (type === 'OSCE') {
-        endpoint = `${API_BASE_URL}/api/osce-stations/${id}`;
-      } else {
-        endpoint = `${API_BASE_URL}/api/submissions/${id}`;
-      }
-      
-      const res = await fetch(endpoint, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error(`Failed to delete ${itemType}`);
+      const endpoint = type === 'OSCE' ? `/api/osce-stations/${id}` : `/api/submissions/${id}`;
+      await apiDelete(endpoint);
       setQuestions(prev => prev.filter(q => q._id !== id));
       setModalOpen(false);
       setSuccessMessage(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} deleted successfully`);
@@ -662,19 +616,9 @@ const AllAdminSubmissions: React.FC = () => {
                       const newStatus = e.target.value;
                       setModalLoading(true);
                       try {
-                        const res = await fetch(`${API_BASE_URL}/api/submissions/${selectedSubmission._id}`, {
-                          method: 'PATCH',
-                          headers: {
-                            'Content-Type': 'application/json',
-                          },
-                          credentials: 'include',
-                          body: JSON.stringify({ status: newStatus }),
-                        });
-                        if (res.ok) {
-                          const updated = await res.json();
-                          setSelectedSubmission(updated);
-                          setQuestions(prev => prev.map(q => q._id === updated._id ? updated : q));
-                        }
+                        const updated = await apiPatch(`/api/submissions/${selectedSubmission._id}`, { status: newStatus });
+                        setSelectedSubmission(updated);
+                        setQuestions(prev => prev.map(q => q._id === updated._id ? updated : q));
                       } finally {
                         setModalLoading(false);
                       }

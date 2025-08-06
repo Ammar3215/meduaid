@@ -7,6 +7,7 @@ import Skeleton from '../components/Skeleton';
 import OsceStationViewModal from '../components/OsceStationViewModal';
 import AdminEditQuestionForm from '../components/AdminEditQuestionForm';
 import { API_BASE_URL } from '../config/api';
+import { apiGet, apiPatch } from '../utils/api';
 
 const QuestionReview: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -45,31 +46,11 @@ const QuestionReview: React.FC = () => {
       setLoading(true);
       setError('');
       try {
-        // Fetch pending SBA
-        const pendingSbaRes = await fetch(`${API_BASE_URL}/api/submissions?status=pending`, {
-          credentials: 'include',
-        });
-        // Fetch pending OSCE
-        const pendingOsceRes = await fetch(`${API_BASE_URL}/api/osce-stations?status=pending`, {
-          credentials: 'include',
-        });
-        // Fetch all SBA for stats
-        const allSbaRes = await fetch(`${API_BASE_URL}/api/submissions`, {
-          credentials: 'include',
-        });
-        // Fetch all OSCE for stats
-        const allOsceRes = await fetch(`${API_BASE_URL}/api/osce-stations`, {
-          credentials: 'include',
-        });
-        if (!pendingSbaRes.ok || !pendingOsceRes.ok || !allSbaRes.ok || !allOsceRes.ok) {
-          setError('Failed to fetch questions');
-          setLoading(false);
-          return;
-        }
-        const pendingSba = await pendingSbaRes.json();
-        const pendingOsce = (await pendingOsceRes.json()).map((q: any) => ({ ...q, type: 'OSCE' }));
-        const allSba = await allSbaRes.json();
-        const allOsce = (await allOsceRes.json()).map((q: any) => ({ ...q, type: 'OSCE' }));
+        // Fetch pending and all questions
+        const pendingSba = await apiGet('/api/submissions?status=pending');
+        const pendingOsce = (await apiGet('/api/osce-stations?status=pending')).map((q: any) => ({ ...q, type: 'OSCE' }));
+        const allSba = await apiGet('/api/submissions');
+        const allOsce = (await apiGet('/api/osce-stations')).map((q: any) => ({ ...q, type: 'OSCE' }));
         setQuestions([...pendingSba.map((q: any) => ({ ...q, type: 'SBA' })), ...pendingOsce]);
         setAllQuestions([...allSba.map((q: any) => ({ ...q, type: 'SBA' })), ...allOsce]);
       } catch {
@@ -85,71 +66,55 @@ const QuestionReview: React.FC = () => {
 
   const setStatus = async (id: string, status: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ status }),
-      });
-      if (response.ok) {
-        // Remove from pending questions if approved or rejected
-        if (status === 'approved' || status === 'rejected') {
-          setQuestions((prev) => prev.filter((q) => q._id !== id));
-        } else {
-          // Update status in pending questions if set back to pending
-          setQuestions((prev) => prev.map((q) => q._id === id ? { ...q, status } : q));
-        }
-        
-        // Update status in all questions
-        setAllQuestions((prev) => prev.map((q) => q._id === id ? { ...q, status } : q));
-        
-        setEditReasonId(null);
-        if (detailsModal.open) setDetailsModal({ open: false, question: null });
-        setToast({
-          message:
-            status === 'approved'
-              ? 'Question accepted successfully'
-              : status === 'rejected'
-              ? 'Question rejected successfully'
-              : 'Question set to pending',
-          type:
-            status === 'approved'
-              ? 'success'
-              : status === 'rejected'
-              ? 'error'
-              : 'info',
-        });
-        setTimeout(() => setToast(null), 2000);
+      await apiPatch(`/api/submissions/${id}`, { status });
+      // Remove from pending questions if approved or rejected
+      if (status === 'approved' || status === 'rejected') {
+        setQuestions((prev) => prev.filter((q) => q._id !== id));
+      } else {
+        // Update status in pending questions if set back to pending
+        setQuestions((prev) => prev.map((q) => q._id === id ? { ...q, status } : q));
       }
-    } catch {}
+      
+      // Update status in all questions
+      setAllQuestions((prev) => prev.map((q) => q._id === id ? { ...q, status } : q));
+      
+      setEditReasonId(null);
+      if (detailsModal.open) setDetailsModal({ open: false, question: null });
+      setToast({
+        message:
+          status === 'approved'
+            ? 'Question accepted successfully'
+            : status === 'rejected'
+            ? 'Question rejected successfully'
+            : 'Question set to pending',
+        type:
+          status === 'approved'
+            ? 'success'
+            : status === 'rejected'
+            ? 'error'
+            : 'info',
+      });
+      setTimeout(() => setToast(null), 2000);
+    } catch (err: any) {
+      setError(err.message || 'Network error');
   };
 
   const saveRejectionReason = async (id: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ status: 'rejected', rejectionReason }),
-      });
-      if (response.ok) {
-        // Remove from pending questions since it's rejected
-        setQuestions((prev) => prev.filter((q) => q._id !== id));
-        
-        // Update status in all questions
-        setAllQuestions((prev) => prev.map((q) => q._id === id ? { ...q, status: 'rejected', rejectionReason } : q));
-        
-        setEditReasonId(null);
-        setRejectionReason('');
-        if (detailsModal.open) setDetailsModal({ open: false, question: null });
-        setToast({ message: 'Question rejected successfully', type: 'error' });
-        setTimeout(() => setToast(null), 2000);
-      }
-    } catch {}
+      await apiPatch(`/api/submissions/${id}`, { status: 'rejected', rejectionReason });
+      // Remove from pending questions since it's rejected
+      setQuestions((prev) => prev.filter((q) => q._id !== id));
+      
+      // Update status in all questions
+      setAllQuestions((prev) => prev.map((q) => q._id === id ? { ...q, status: 'rejected', rejectionReason } : q));
+      
+      setEditReasonId(null);
+      setRejectionReason('');
+      if (detailsModal.open) setDetailsModal({ open: false, question: null });
+      setToast({ message: 'Question rejected successfully', type: 'error' });
+      setTimeout(() => setToast(null), 2000);
+    } catch (err: any) {
+      setError(err.message || 'Network error');
   };
 
   // Filter questions by selected category/subject/topic/writer

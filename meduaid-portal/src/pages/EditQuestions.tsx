@@ -5,6 +5,7 @@ import Skeleton from '../components/Skeleton';
 import { subjectsStructure } from '../utils/subjectsStructure';
 import OsceStationForm from '../components/OsceStationForm';
 import { API_BASE_URL } from '../config/api';
+import { apiGet, apiPatch, apiDelete, apiUpload } from '../utils/api';
 
 type EditFormInputs = {
   question: string;
@@ -75,17 +76,9 @@ const EditQuestions: React.FC = () => {
       setLoading(true);
       setError('');
       try {
-        // Fetch rejected/draft SBA
-        const sbaRes = await fetch(`${API_BASE_URL}/api/submissions?status=rejected,draft`, {
-          credentials: 'include',
-        });
-        // Fetch rejected/draft OSCE
-        const osceRes = await fetch(`${API_BASE_URL}/api/osce-stations?status=rejected,draft`, {
-          credentials: 'include',
-        });
-        if (!sbaRes.ok || !osceRes.ok) throw new Error('Failed to fetch questions');
-        const sba = await sbaRes.json();
-        const osce = await osceRes.json();
+        // Fetch rejected/draft SBA and OSCE
+        const sba = await apiGet('/api/submissions?status=rejected,draft');
+        const osce = await apiGet('/api/osce-stations?status=rejected,draft');
         const sbaQs = (Array.isArray(sba) ? sba : sba.submissions || []).map((q: any) => ({ ...q, type: 'SBA' }));
         const osceQs = (Array.isArray(osce) ? osce : osce.submissions || []).map((q: any) => ({ ...q, type: 'OSCE' }));
         setQuestions([...sbaQs, ...osceQs]);
@@ -152,12 +145,7 @@ const EditQuestions: React.FC = () => {
         data.explanations.forEach((e: string, i: number) => formData.append(`explanations[${i}]`, e));
         formData.append('reference', data.reference);
         formData.append('status', data.status === 'draft' ? 'draft' : 'pending');
-        const res = await fetch(`${API_BASE_URL}/api/submissions/${editingId}`, {
-          method: 'PATCH',
-          credentials: 'include',
-          body: formData,
-        });
-        if (!res.ok) throw new Error('Failed to update question');
+        await apiUpload(`/api/submissions/${editingId}`, formData, { method: 'PATCH' });
       } else {
         // No image change
         const payload = {
@@ -171,15 +159,7 @@ const EditQuestions: React.FC = () => {
           reference: data.reference,
           status: data.status === 'draft' ? 'draft' : 'pending',
         };
-        const res = await fetch(`${API_BASE_URL}/api/submissions/${editingId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) throw new Error('Failed to update question');
+        await apiPatch(`/api/submissions/${editingId}`, payload);
       }
       setQuestions(prev => prev.filter(q => q._id !== editingId));
       setEditingId(null);
@@ -195,11 +175,7 @@ const EditQuestions: React.FC = () => {
     if (!window.confirm('Are you sure you want to delete this question? This action cannot be undone.')) return;
     setError('');
     try {
-      const res = await fetch(`${API_BASE_URL}/api/submissions/${id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to delete question');
+      await apiDelete(`/api/submissions/${id}`);
       setQuestions(prev => prev.filter(q => q._id !== id));
     } catch (err: any) {
       setError(err.message || 'Network error');
@@ -469,15 +445,7 @@ const EditQuestions: React.FC = () => {
                   initialData={osceEditData}
                   onSubmit={async (data) => {
                     try {
-                      const res = await fetch(`${API_BASE_URL}/api/osce-stations/${osceEditId}`, {
-                        method: 'PATCH',
-                        headers: {
-                          'Content-Type': 'application/json',
-                        },
-                        credentials: 'include',
-                        body: JSON.stringify({ ...data, status: 'pending' }),
-                      });
-                      if (!res.ok) throw new Error('Failed to update OSCE station');
+                      await apiPatch(`/api/osce-stations/${osceEditId}`, { ...data, status: 'pending' });
                       setQuestions(prev => prev.filter(q => q._id !== osceEditId));
                       setOsceEditId(null);
                       setOsceEditData(null);

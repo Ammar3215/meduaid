@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { subjectsStructure } from '../utils/subjectsStructure';
 import { useAuth } from '../context/AuthContext';
 import { ClipboardDocumentListIcon, UserGroupIcon } from '@heroicons/react/24/outline';
-import { API_BASE_URL } from '../config/api';
+import { apiGet, apiPost, apiUpload } from '../utils/api';
 
 const questionSchema = z.object({
   category: z.string().nonempty('Required field'),
@@ -113,14 +113,11 @@ const AdminQuestionSubmission: React.FC = () => {
   useEffect(() => {
     const fetchWriters = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/admin/writers`, {
-          credentials: 'include',
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setWriters(data);
-        }
-      } catch {}
+        const data = await apiGet('/api/admin/writers');
+        setWriters(data);
+      } catch (err: any) {
+        console.error('Failed to fetch writers:', err.message);
+      }
     };
     if (isAuthenticated) fetchWriters();
   }, [isAuthenticated]);
@@ -150,13 +147,7 @@ const AdminQuestionSubmission: React.FC = () => {
   const uploadImages = async (files: FileList): Promise<string[]> => {
     const formData = new FormData();
     Array.from(files).forEach(file => formData.append('images', file));
-    const res = await fetch(`${API_BASE_URL}/api/submissions/upload`, {
-      method: 'POST',
-      credentials: 'include',
-      body: formData,
-    });
-    if (!res.ok) throw new Error('Image upload failed');
-    const data = await res.json();
+    const data = await apiUpload('/api/submissions/upload', formData);
     return data.urls;
   };
 
@@ -260,19 +251,7 @@ const AdminQuestionSubmission: React.FC = () => {
         writer: data.writer,
         correctChoice: data.correctChoice,
       };
-      const response = await fetch(`${API_BASE_URL}/api/submissions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        setError('Failed to submit question');
-        setLoading(false);
-        return;
-      }
+      await apiPost('/api/submissions', payload);
       setSuccess(true);
       resetQuestionFields();
       setTimeout(() => setSuccess(false), 1500);
@@ -305,19 +284,7 @@ const AdminQuestionSubmission: React.FC = () => {
         writer: data.writer,
         correctChoice: data.correctChoice,
       };
-      const response = await fetch(`${API_BASE_URL}/api/submissions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        setError('Failed to submit question');
-        setLoading(false);
-        return;
-      }
+      await apiPost('/api/submissions', payload);
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
@@ -353,19 +320,7 @@ const AdminQuestionSubmission: React.FC = () => {
         writer: data.writer,
         correctChoice: data.correctChoice,
       };
-      const response = await fetch(`${API_BASE_URL}/api/submissions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        setError('Failed to save draft');
-        setLoading(false);
-        return;
-      }
+      await apiPost('/api/submissions', payload);
       setDraftSuccess(true);
       setTimeout(() => setDraftSuccess(false), 1500);
     } catch {
@@ -468,19 +423,7 @@ const AdminQuestionSubmission: React.FC = () => {
         writer: osceWriter, // Add writer to payload
       };
       
-      const res = await fetch(`${API_BASE_URL}/api/osce-stations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
-      
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || `Failed to submit OSCE station (${res.status})`);
-      }
+      await apiPost('/api/osce-stations', payload);
       
       // Show success toast
       setSuccess(true);
@@ -573,19 +516,7 @@ const AdminQuestionSubmission: React.FC = () => {
         writer: osceWriter, // Add writer to payload
       };
       
-      const res = await fetch(`${API_BASE_URL}/api/osce-stations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
-      
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || `Failed to save draft (${res.status})`);
-      }
+      await apiPost('/api/osce-stations', payload);
       
       setDraftSuccess(true);
       setTimeout(() => setDraftSuccess(false), 2000);
