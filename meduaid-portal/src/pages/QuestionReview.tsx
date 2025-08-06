@@ -97,6 +97,7 @@ const QuestionReview: React.FC = () => {
       setTimeout(() => setToast(null), 2000);
     } catch (err: any) {
       setError(err.message || 'Network error');
+    }
   };
 
   const saveRejectionReason = async (id: string) => {
@@ -115,6 +116,7 @@ const QuestionReview: React.FC = () => {
       setTimeout(() => setToast(null), 2000);
     } catch (err: any) {
       setError(err.message || 'Network error');
+    }
   };
 
   // Filter questions by selected category/subject/topic/writer

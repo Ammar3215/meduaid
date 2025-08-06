@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { subjectsStructure } from '../utils/subjectsStructure';
 import { ClipboardDocumentListIcon, UserGroupIcon } from '@heroicons/react/24/outline';
-import { API_BASE_URL } from '../config/api';
 import { apiPost, apiUpload } from '../utils/api';
 
 const questionSchema = z.object({

@@ -5,7 +5,6 @@ import { FunnelIcon, UserGroupIcon, CalendarDaysIcon, BookOpenIcon, TagIcon, Eye
 import QuestionViewModal from '../components/QuestionViewModal';
 import OsceStationViewModal from '../components/OsceStationViewModal';
 import AdminEditQuestionForm from '../components/AdminEditQuestionForm';
-import { API_BASE_URL } from '../config/api';
 import { apiGet, apiPatch, apiDelete } from '../utils/api';
 
 const allCategories = ['All', ...Object.keys(subjectsStructure)];
@@ -150,6 +149,7 @@ const AllAdminSubmissions: React.FC = () => {
       setQuestions(prev => prev.map(q => q._id === id ? { ...q, status: 'rejected', rejectionReason: reason } : q));
     } catch (err: any) {
       setError(err.message || 'Network error');
+    }
   };
 
   // Handle View button click
