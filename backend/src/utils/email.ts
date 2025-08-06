@@ -2,13 +2,21 @@ import nodemailer from 'nodemailer';
 
 console.log('Email service initialized:', process.env.GMAIL_USER ? '✅' : '❌');
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS,
-  },
-});
+let transporter: nodemailer.Transporter;
+
+try {
+  transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_PASS,
+    },
+  });
+  console.log('Email transporter created successfully');
+} catch (error) {
+  console.error('Failed to create email transporter:', error);
+  process.exit(1);
+}
 
 const frontendBaseUrl = process.env.FRONTEND_BASE_URL || 'http://localhost:5173';
 

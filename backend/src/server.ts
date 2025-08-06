@@ -2,8 +2,20 @@ import dotenv from 'dotenv';
 import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-import app from './app';
 import mongoose from 'mongoose';
+
+import app from './app';
+
+// Add error handlers to prevent crashes
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
 
 const PORT = process.env.PORT || 5050;
 const MONGO_URI = process.env.MONGO_URI || '';
@@ -24,13 +36,25 @@ if (process.env.JWT_SECRET.length < 32) {
   process.exit(1);
 }
 
-mongoose.connect(MONGO_URI)
-  .then(() => {
-    console.log('Connected to MongoDB');
-    app.listen(PORT, () => {
+console.log('Attempting to connect to MongoDB...');
+
+async function connectToMongoDB() {
+  try {
+    await mongoose.connect(MONGO_URI);
+    console.log('Connected to MongoDB successfully');
+    
+    console.log(`Starting server on port ${PORT}...`);
+    const server = app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
-  })
-  .catch((err) => {
-    console.error('Failed to connect to MongoDB', err);
-  });
+    
+    server.on('error', (error) => {
+      console.error('Server failed to start:', error);
+    });
+  } catch (err) {
+    console.error('Failed to connect to MongoDB:', err);
+    process.exit(1);
+  }
+}
+
+connectToMongoDB();
