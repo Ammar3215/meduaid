@@ -95,30 +95,45 @@ const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
   const [error, setError] = useState('');
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        setDebugInfo(prev => [...prev, `Admin fetching stats from: ${API_BASE_URL}/api/admin/stats`]);
         const response = await fetch(`${API_BASE_URL}/api/admin/stats`, {
           credentials: 'include',
         });
+        setDebugInfo(prev => [...prev, `Admin stats response status: ${response.status}`]);
         if (!response.ok) {
+          const errorText = await response.text();
+          setDebugInfo(prev => [...prev, `Admin stats failed: ${response.status} ${response.statusText} - ${errorText}`]);
           return;
         }
         const data = await response.json();
+        setDebugInfo(prev => [...prev, `Admin stats data received: ${JSON.stringify(data).substring(0, 200)}...`]);
         setStats(data);
-      } catch {}
+      } catch (error) {
+        setDebugInfo(prev => [...prev, `Admin stats error: ${error}`]);
+      }
     };
     const fetchPenalties = async () => {
       try {
+        setDebugInfo(prev => [...prev, `Admin fetching penalties from: ${API_BASE_URL}/api/admin/penalties`]);
         const response = await fetch(`${API_BASE_URL}/api/admin/penalties`, {
           credentials: 'include',
         });
+        setDebugInfo(prev => [...prev, `Admin penalties response status: ${response.status}`]);
         if (response.ok) {
           const data = await response.json();
+          setDebugInfo(prev => [...prev, `Admin penalties data received: ${data.penalties?.length || 0} items`]);
           setPenalties(data.penalties || []);
+        } else {
+          setDebugInfo(prev => [...prev, `Admin penalties failed: ${response.status} ${response.statusText}`]);
         }
-      } catch {}
+      } catch (error) {
+        setDebugInfo(prev => [...prev, `Admin penalties error: ${error}`]);
+      }
     };
     if (isAuthenticated) {
       fetchStats();
@@ -631,6 +646,24 @@ const AdminDashboard: React.FC = () => {
       {error && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-2 rounded shadow-lg z-50 text-center">
           {error}
+        </div>
+      )}
+
+      {/* Debug Panel - only show if there are debug messages */}
+      {debugInfo.length > 0 && (
+        <div className="bg-gray-100 rounded-xl shadow-lg p-4 w-full mt-8 mx-auto max-w-6xl border-2 border-orange-200">
+          <div className="text-sm font-bold mb-2 text-orange-600">Admin Debug Information:</div>
+          <div className="text-xs text-gray-700 space-y-1 max-h-40 overflow-y-auto">
+            {debugInfo.map((info, index) => (
+              <div key={index} className="break-all">{info}</div>
+            ))}
+          </div>
+          <button 
+            onClick={() => setDebugInfo([])}
+            className="mt-2 text-xs bg-orange-500 text-white px-2 py-1 rounded hover:bg-orange-600"
+          >
+            Clear Debug
+          </button>
         </div>
       )}
     </div>

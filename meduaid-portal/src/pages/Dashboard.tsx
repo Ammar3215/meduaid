@@ -38,6 +38,7 @@ const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
   const categories = Object.keys(subjectsStructure);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedSubject, setSelectedSubject] = useState('All');
@@ -79,14 +80,19 @@ const Dashboard: React.FC = () => {
     const fetchStats = async () => {
       setLoading(true);
       setError('');
+      setDebugInfo([]);
       try {
         // Use appropriate endpoint based on user role
         const endpoint = user?.isAdmin ? '/api/admin/stats' : '/api/writer/stats';
+        setDebugInfo(prev => [...prev, `Fetching stats from: ${endpoint}`]);
+        setDebugInfo(prev => [...prev, `User role: ${user?.role}, isAdmin: ${user?.isAdmin}`]);
         const data = await apiGet(endpoint);
+        setDebugInfo(prev => [...prev, `Stats data received: ${JSON.stringify(data).substring(0, 200)}...`]);
         setStats(data);
         // Do not set selectedSubject here; default is 'All'
       } catch (error) {
-        setError('Failed to fetch stats');
+        setDebugInfo(prev => [...prev, `Stats fetch error: ${error}`]);
+        setError(`Failed to fetch stats: ${error}`);
       }
       setLoading(false);
     };
@@ -94,9 +100,12 @@ const Dashboard: React.FC = () => {
       try {
         // Use appropriate endpoint based on user role
         const endpoint = user?.isAdmin ? '/api/admin/penalties' : '/api/writer/penalties';
+        setDebugInfo(prev => [...prev, `Fetching penalties from: ${endpoint}`]);
         const data = await apiGet(endpoint);
+        setDebugInfo(prev => [...prev, `Penalties data received: ${data.penalties?.length || 0} items`]);
         setPenalties(data.penalties || []);
       } catch (error) {
+        setDebugInfo(prev => [...prev, `Penalties fetch error: ${error}`]);
         // Silently handle penalties fetch error
       }
     };
@@ -636,6 +645,24 @@ const Dashboard: React.FC = () => {
             </>
           )}
         </div>
+        
+        {/* Debug Panel - only show if there are debug messages */}
+        {debugInfo.length > 0 && (
+          <div className="bg-gray-100 rounded-xl shadow-lg p-4 w-full mt-8 border-2 border-orange-200">
+            <div className="text-sm font-bold mb-2 text-orange-600">Debug Information:</div>
+            <div className="text-xs text-gray-700 space-y-1">
+              {debugInfo.map((info, index) => (
+                <div key={index} className="break-all">{info}</div>
+              ))}
+            </div>
+            <button 
+              onClick={() => setDebugInfo([])}
+              className="mt-2 text-xs bg-orange-500 text-white px-2 py-1 rounded hover:bg-orange-600"
+            >
+              Clear Debug
+            </button>
+          </div>
+        )}
       </div>
     </>
   );
