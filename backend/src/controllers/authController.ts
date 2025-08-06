@@ -68,8 +68,9 @@ export const login: RequestHandler = asyncHandler(async (req, res) => {
     // Set httpOnly cookie instead of sending token in response body
     res.cookie('jwt', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // HTTPS in production
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict', // Allow cross-origin in production
+      secure: true, // Always secure for cross-origin
+      sameSite: 'none', // Required for cross-origin cookies
+      domain: process.env.NODE_ENV === 'production' ? undefined : undefined, // Let browser handle domain
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
     });
     
@@ -272,8 +273,8 @@ export const resetPassword: RequestHandler = async (req, res): Promise<void> => 
 export const logout: RequestHandler = (req, res) => {
   res.clearCookie('jwt', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+    secure: true, // Always secure for cross-origin
+    sameSite: 'none', // Required for cross-origin cookies
   });
   res.json({ message: 'Logged out successfully' });
 }; 

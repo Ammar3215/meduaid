@@ -49,10 +49,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (response.success) {
         setUser(response.user);
         localStorage.setItem('user', JSON.stringify(response.user));
+        // Store cookie debug info for debugging purposes
+        localStorage.setItem('debug_cookies', document.cookie);
+        localStorage.setItem('debug_login_time', new Date().toISOString());
         return true;
       }
       return false;
-    } catch {
+    } catch (error) {
       return false;
     }
   };

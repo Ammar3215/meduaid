@@ -86,6 +86,8 @@ const Dashboard: React.FC = () => {
         const endpoint = user?.isAdmin ? '/api/admin/stats' : '/api/writer/stats';
         setDebugInfo(prev => [...prev, `Fetching stats from: ${endpoint}`]);
         setDebugInfo(prev => [...prev, `User role: ${user?.role}, isAdmin: ${user?.isAdmin}`]);
+        setDebugInfo(prev => [...prev, `Current cookies: ${document.cookie || 'No cookies found'}`]);
+        setDebugInfo(prev => [...prev, `Login time: ${localStorage.getItem('debug_login_time') || 'Unknown'}`]);
         const data = await apiGet(endpoint);
         setDebugInfo(prev => [...prev, `Stats data received: ${JSON.stringify(data).substring(0, 200)}...`]);
         setStats(data);
