@@ -76,6 +76,7 @@ export const login: RequestHandler = asyncHandler(async (req, res) => {
     
   res.json({
     success: true,
+    token: token, // Return JWT token in response body
     user: {
       id: user._id,
       name: user.name,

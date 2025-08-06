@@ -49,8 +49,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (response.success) {
         setUser(response.user);
         localStorage.setItem('user', JSON.stringify(response.user));
-        // Store cookie debug info for debugging purposes
-        localStorage.setItem('debug_cookies', document.cookie);
+        // Store JWT token for API authentication
+        localStorage.setItem('auth_token', response.token);
+        // Store debug info for troubleshooting
         localStorage.setItem('debug_login_time', new Date().toISOString());
         return true;
       }
@@ -95,6 +96,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     setUser(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('auth_token'); // Clear JWT token
+    localStorage.removeItem('debug_login_time'); // Clear debug info
   };
 
   const isAuthenticated = !!user;

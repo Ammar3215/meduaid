@@ -1,10 +1,19 @@
 import { API_BASE_URL } from '../config/api';
 
-// Universal fetch configuration for all browsers
-const defaultHeaders = {
-  'Content-Type': 'application/json',
-  'Accept': 'application/json',
-  'X-Requested-With': 'XMLHttpRequest',
+// Get auth headers with JWT token from localStorage
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('auth_token');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  return headers;
 };
 
 // Universal GET request
@@ -12,7 +21,7 @@ export const apiGet = async (endpoint: string, options: RequestInit = {}) => {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     method: 'GET',
     headers: {
-      ...defaultHeaders,
+      ...getAuthHeaders(),
       ...options.headers,
     },
     credentials: 'include',
@@ -31,7 +40,7 @@ export const apiPost = async (endpoint: string, data?: any, options: RequestInit
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     method: 'POST',
     headers: {
-      ...defaultHeaders,
+      ...getAuthHeaders(),
       ...options.headers,
     },
     credentials: 'include',
@@ -51,7 +60,7 @@ export const apiPut = async (endpoint: string, data?: any, options: RequestInit 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     method: 'PUT',
     headers: {
-      ...defaultHeaders,
+      ...getAuthHeaders(),
       ...options.headers,
     },
     credentials: 'include',
@@ -71,7 +80,7 @@ export const apiDelete = async (endpoint: string, options: RequestInit = {}) => 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     method: 'DELETE',
     headers: {
-      ...defaultHeaders,
+      ...getAuthHeaders(),
       ...options.headers,
     },
     credentials: 'include',
@@ -90,7 +99,7 @@ export const apiPatch = async (endpoint: string, data?: any, options: RequestIni
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     method: 'PATCH',
     headers: {
-      ...defaultHeaders,
+      ...getAuthHeaders(),
       ...options.headers,
     },
     credentials: 'include',
@@ -107,11 +116,21 @@ export const apiPatch = async (endpoint: string, data?: any, options: RequestIni
 
 // File upload utility
 export const apiUpload = async (endpoint: string, formData: FormData, options: RequestInit = {}) => {
+  const token = localStorage.getItem('auth_token');
+  const headers: Record<string, string> = {
+    'Accept': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+  };
+  
+  // Add authorization header if token exists, but don't set Content-Type for file uploads
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     method: 'POST',
     headers: {
-      'Accept': 'application/json',
-      'X-Requested-With': 'XMLHttpRequest',
+      ...headers,
       ...options.headers,
     },
     credentials: 'include',

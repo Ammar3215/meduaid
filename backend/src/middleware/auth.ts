@@ -2,14 +2,17 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 export const authenticate = (req: Request, res: Response, next: NextFunction) => {
-  // Try to get token from cookie first, then fallback to Authorization header for backward compatibility
-  let token = req.cookies?.jwt;
+  // Try to get token from Authorization header first (primary method), then fallback to cookies
+  let token: string | undefined;
   
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  }
+  
+  // Fallback to cookie if no Authorization header
   if (!token) {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.split(' ')[1];
-    }
+    token = req.cookies?.jwt;
   }
   
   if (!token) {
