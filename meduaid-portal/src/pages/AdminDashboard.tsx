@@ -6,6 +6,7 @@ import Skeleton from '../components/Skeleton';
 import AdminEditQuestionForm from '../components/AdminEditQuestionForm';
 import OsceStationViewModal from '../components/OsceStationViewModal';
 import { API_BASE_URL } from '../config/api';
+import { apiGet } from '../utils/api';
 
 const COLORS = [
   '#4B47B6', // deep purple
@@ -100,17 +101,10 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        setDebugInfo(prev => [...prev, `Admin fetching stats from: ${API_BASE_URL}/api/admin/stats`]);
-        const response = await fetch(`${API_BASE_URL}/api/admin/stats`, {
-          credentials: 'include',
-        });
-        setDebugInfo(prev => [...prev, `Admin stats response status: ${response.status}`]);
-        if (!response.ok) {
-          const errorText = await response.text();
-          setDebugInfo(prev => [...prev, `Admin stats failed: ${response.status} ${response.statusText} - ${errorText}`]);
-          return;
-        }
-        const data = await response.json();
+        setDebugInfo(prev => [...prev, `Admin fetching stats from: /api/admin/stats`]);
+        const token = localStorage.getItem('auth_token');
+        setDebugInfo(prev => [...prev, `Admin auth token: ${token ? `${token.substring(0, 20)}...` : 'No token found'}`]);
+        const data = await apiGet('/api/admin/stats');
         setDebugInfo(prev => [...prev, `Admin stats data received: ${JSON.stringify(data).substring(0, 200)}...`]);
         setStats(data);
       } catch (error) {
@@ -119,18 +113,10 @@ const AdminDashboard: React.FC = () => {
     };
     const fetchPenalties = async () => {
       try {
-        setDebugInfo(prev => [...prev, `Admin fetching penalties from: ${API_BASE_URL}/api/admin/penalties`]);
-        const response = await fetch(`${API_BASE_URL}/api/admin/penalties`, {
-          credentials: 'include',
-        });
-        setDebugInfo(prev => [...prev, `Admin penalties response status: ${response.status}`]);
-        if (response.ok) {
-          const data = await response.json();
-          setDebugInfo(prev => [...prev, `Admin penalties data received: ${data.penalties?.length || 0} items`]);
-          setPenalties(data.penalties || []);
-        } else {
-          setDebugInfo(prev => [...prev, `Admin penalties failed: ${response.status} ${response.statusText}`]);
-        }
+        setDebugInfo(prev => [...prev, `Admin fetching penalties from: /api/admin/penalties`]);
+        const data = await apiGet('/api/admin/penalties');
+        setDebugInfo(prev => [...prev, `Admin penalties data received: ${data.penalties?.length || 0} items`]);
+        setPenalties(data.penalties || []);
       } catch (error) {
         setDebugInfo(prev => [...prev, `Admin penalties error: ${error}`]);
       }
