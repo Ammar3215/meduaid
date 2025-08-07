@@ -16,13 +16,21 @@ exports.sendVerificationEmail = sendVerificationEmail;
 exports.sendPasswordResetEmail = sendPasswordResetEmail;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 console.log('Email service initialized:', process.env.GMAIL_USER ? '✅' : '❌');
-const transporter = nodemailer_1.default.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_PASS,
-    },
-});
+let transporter;
+try {
+    transporter = nodemailer_1.default.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.GMAIL_USER,
+            pass: process.env.GMAIL_PASS,
+        },
+    });
+    console.log('Email transporter created successfully');
+}
+catch (error) {
+    console.error('Failed to create email transporter:', error);
+    process.exit(1);
+}
 const frontendBaseUrl = process.env.FRONTEND_BASE_URL || 'http://localhost:5173';
 function sendVerificationEmail(to, token) {
     return __awaiter(this, void 0, void 0, function* () {

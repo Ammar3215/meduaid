@@ -116,7 +116,7 @@ const AdminQuestionSubmission: React.FC = () => {
         const data = await apiGet('/api/admin/writers');
         setWriters(data);
       } catch (err: any) {
-        console.error('Failed to fetch writers:', err.message);
+        // Handle writer fetch error silently
       }
     };
     if (isAuthenticated) fetchWriters();

@@ -12,7 +12,17 @@
       "Bash(git rm:*)",
       "Bash(touch:*)",
       "Bash(git filter-branch:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout 8 npm run dev)",
+      "Bash(timeout 5 node -e \"const mongoose = require(''mongoose''); mongoose.connect(''mongodb+srv://meduaid3:Qawsedrf1233@cluster1.zuyfhlo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster1'').then(() => { console.log(''MongoDB Connected Successfully''); process.exit(0); }).catch(err => { console.error(''MongoDB Connection Failed:'', err); process.exit(1); });\")",
+      "Bash(timeout 10 npm run dev)",
+      "Bash(timeout 15 npm run dev)",
+      "Bash(timeout:*)",
+      "Bash(git commit:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git push:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }
