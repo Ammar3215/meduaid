@@ -188,12 +188,34 @@ const AdminQuestionSubmission: React.FC = () => {
   // Add/Remove marking scheme sections
   const getDefaultSections = () => (osceType === 'history' ? historySections : examSections);
   const [osceCustomSections, setOsceCustomSections] = useState<string[]>([]);
+  const [osceSectionMarks, setOsceSectionMarks] = useState<{ [section: string]: { sectionMark: number; requiredSubSections: number } }>({});
   const addCustomSection = () => setOsceCustomSections([...osceCustomSections, '']);
   const updateCustomSection = (idx: number, val: string) => {
     setOsceCustomSections(osceCustomSections.map((s, i) => (i === idx ? val : s)));
   };
   const removeCustomSection = (idx: number) => {
     setOsceCustomSections(osceCustomSections.filter((_, i) => i !== idx));
+  };
+
+  // Handle section mark and required sub-sections
+  const updateSectionMark = (section: string, sectionMark: number) => {
+    setOsceSectionMarks(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        sectionMark: sectionMark || 0
+      }
+    }));
+  };
+
+  const updateRequiredSubSections = (section: string, requiredSubSections: number) => {
+    setOsceSectionMarks(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        requiredSubSections: requiredSubSections || 0
+      }
+    }));
   };
 
   // Marking scheme items per section
@@ -329,6 +351,55 @@ const AdminQuestionSubmission: React.FC = () => {
     setLoading(false);
   };
 
+  // Real-time validation functions
+  const calculateIndividualTotal = (section: string): number => {
+    const items = osceMarkItems[section] || [];
+    return items.reduce((sum, item) => sum + (Number(item.score) || 0), 0);
+  };
+
+  const getSectionMarkValidationClass = (section: string): string => {
+    const sectionMarkData = osceSectionMarks[section];
+    if (!sectionMarkData || !sectionMarkData.sectionMark) {
+      return 'w-full px-2 py-1 border rounded'; // Default
+    }
+    
+    const sectionMark = sectionMarkData.sectionMark;
+    const individualTotal = calculateIndividualTotal(section);
+    
+    // Invalid section mark range (1-5)
+    if (sectionMark < 1 || sectionMark > 5) {
+      return 'w-full px-2 py-1 border-2 border-red-500 rounded bg-red-50';
+    }
+    
+    // Individual points exceed section mark
+    if (individualTotal > sectionMark) {
+      return 'w-full px-2 py-1 border-2 border-yellow-500 rounded bg-yellow-50';
+    }
+    
+    // Valid
+    return 'w-full px-2 py-1 border-2 border-green-500 rounded bg-green-50';
+  };
+
+  const getRealTimeIndicator = (section: string): { text: string; color: string; icon: string } => {
+    const sectionMarkData = osceSectionMarks[section];
+    if (!sectionMarkData || !sectionMarkData.sectionMark) {
+      return { text: '', color: 'text-gray-500', icon: '' };
+    }
+    
+    const sectionMark = sectionMarkData.sectionMark;
+    const individualTotal = calculateIndividualTotal(section);
+    
+    if (sectionMark < 1 || sectionMark > 5) {
+      return { text: 'Mark must be 1-5', color: 'text-red-600', icon: '❌' };
+    }
+    
+    if (individualTotal > sectionMark) {
+      return { text: `Individual: ${individualTotal}/${sectionMark}`, color: 'text-yellow-600', icon: '⚠️' };
+    }
+    
+    return { text: `Individual: ${individualTotal}/${sectionMark}`, color: 'text-green-600', icon: '✅' };
+  };
+
   // OSCE validation and submission functions
   const validateOsce = () => {
     const errs: any = {};
@@ -363,6 +434,33 @@ const AdminQuestionSubmission: React.FC = () => {
       if (q.question.trim() && q.answers.some(ans => ans.trim()) && (!q.score || !q.score.trim())) errs[`followup_score_${idx}`] = 'Score is required.';
     });
     if (!osceGuidelinesConfirmed) errs.guidelines = 'You must confirm you have read and followed the guidelines.';
+    
+    // Validate section marks and individual points
+    const allSections = [...getDefaultSections(), ...osceCustomSections.filter(Boolean)];
+    allSections.forEach(section => {
+      const sectionMarkData = osceSectionMarks[section];
+      if (sectionMarkData && sectionMarkData.sectionMark > 0) {
+        const sectionMark = sectionMarkData.sectionMark;
+        
+        // Check section mark is between 1-5
+        if (sectionMark < 1 || sectionMark > 5) {
+          errs[`section_mark_${section}`] = `Section "${section}" mark must be between 1-5 points.`;
+        }
+        
+        // Check individual points don't exceed section mark
+        const individualItems = osceMarkItems[section] || [];
+        const individualTotal = individualItems.reduce((sum, item) => sum + (Number(item.score) || 0), 0);
+        if (individualTotal > sectionMark) {
+          errs[`section_points_${section}`] = `Section "${section}" individual points (${individualTotal}) exceed section mark (${sectionMark}).`;
+        }
+        
+        // Check required sub-sections is provided when section mark is set
+        if (!sectionMarkData.requiredSubSections || sectionMarkData.requiredSubSections < 1) {
+          errs[`required_subsections_${section}`] = `Section "${section}" requires sub-sections count for full mark.`;
+        }
+      }
+    });
+    
     setOsceErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -402,15 +500,20 @@ const AdminQuestionSubmission: React.FC = () => {
         type: osceType,
         caseDescription: osceCase,
         historySections: osceType === 'history' ? osceHistorySections : undefined,
+        customActorSections: osceCustomSections.filter(Boolean),
         markingScheme: [
           ...getDefaultSections().map(section => ({
             section,
+            sectionMark: osceSectionMarks[section]?.sectionMark || 0,
+            requiredSubSections: osceSectionMarks[section]?.requiredSubSections || 0,
             items: (osceMarkItems[section] || []).map(i => ({ desc: i.desc, score: Number(i.score) || 0 }))
-          })).filter(section => section.items.length > 0), // Only include sections with items
+          })),
           ...osceCustomSections.filter(Boolean).map(section => ({
             section,
+            sectionMark: osceSectionMarks[section]?.sectionMark || 0,
+            requiredSubSections: osceSectionMarks[section]?.requiredSubSections || 0,
             items: (osceMarkItems[section] || []).map(i => ({ desc: i.desc, score: Number(i.score) || 0 }))
-          })).filter(section => section.items.length > 0) // Only include sections with items
+          }))
         ],
         followUps: osceFollowUps.filter(q => q.question.trim() && q.answers.some(ans => ans.trim())).map(q => ({
           question: q.question,
@@ -441,6 +544,7 @@ const AdminQuestionSubmission: React.FC = () => {
       setOsceHistorySections(Object.fromEntries(historySectionKeys.map(k => [k, '']))); // Reset history sections
       setOsceMarkItems({});
       setOsceCustomSections([]);
+      setOsceSectionMarks({});
       setOsceFollowUps([
         { question: '', answers: [''], score: '' }, 
         { question: '', answers: [''], score: '' }, 
@@ -495,15 +599,20 @@ const AdminQuestionSubmission: React.FC = () => {
         type: osceType,
         caseDescription: osceCase,
         historySections: osceType === 'history' ? osceHistorySections : undefined,
+        customActorSections: osceCustomSections.filter(Boolean),
         markingScheme: [
           ...getDefaultSections().map(section => ({
             section,
+            sectionMark: osceSectionMarks[section]?.sectionMark || 0,
+            requiredSubSections: osceSectionMarks[section]?.requiredSubSections || 0,
             items: (osceMarkItems[section] || []).map(i => ({ desc: i.desc, score: Number(i.score) || 0 }))
-          })).filter(section => section.items.length > 0), // Only include sections with items
+          })),
           ...osceCustomSections.filter(Boolean).map(section => ({
             section,
+            sectionMark: osceSectionMarks[section]?.sectionMark || 0,
+            requiredSubSections: osceSectionMarks[section]?.requiredSubSections || 0,
             items: (osceMarkItems[section] || []).map(i => ({ desc: i.desc, score: Number(i.score) || 0 }))
-          })).filter(section => section.items.length > 0) // Only include sections with items
+          }))
         ],
         followUps: osceFollowUps.filter(q => q.question.trim() && q.answers.some(ans => ans.trim())).map(q => ({
           question: q.question,
@@ -532,19 +641,33 @@ const AdminQuestionSubmission: React.FC = () => {
     let total = 0;
     // Sum marks from default sections
     getDefaultSections().forEach(section => {
-      const items = osceMarkItems[section] || [];
-      items.forEach(item => {
-        const score = parseFloat(item.score) || 0;
-        total += score;
-      });
+      const sectionMark = osceSectionMarks[section]?.sectionMark || 0;
+      if (sectionMark > 0) {
+        // Use section mark if available
+        total += sectionMark;
+      } else {
+        // Otherwise sum individual items
+        const items = osceMarkItems[section] || [];
+        items.forEach(item => {
+          const score = parseFloat(item.score) || 0;
+          total += score;
+        });
+      }
     });
     // Sum marks from custom sections
     osceCustomSections.forEach(section => {
-      const items = osceMarkItems[section] || [];
-      items.forEach(item => {
-        const score = parseFloat(item.score) || 0;
-        total += score;
-      });
+      const sectionMark = osceSectionMarks[section]?.sectionMark || 0;
+      if (sectionMark > 0) {
+        // Use section mark if available
+        total += sectionMark;
+      } else {
+        // Otherwise sum individual items
+        const items = osceMarkItems[section] || [];
+        items.forEach(item => {
+          const score = parseFloat(item.score) || 0;
+          total += score;
+        });
+      }
     });
     // Sum marks from follow-up questions
     osceFollowUps.forEach(q => {
@@ -771,7 +894,7 @@ const AdminQuestionSubmission: React.FC = () => {
                   <label className="block mb-1 font-medium">Station Type</label>
                   <select
                     value={osceType}
-                    onChange={e => { setOsceType(e.target.value as 'history' | 'examination'); setOsceMarkItems({}); setOsceCustomSections([]); }}
+                    onChange={e => { setOsceType(e.target.value as 'history' | 'examination'); setOsceMarkItems({}); setOsceCustomSections([]); setOsceSectionMarks({}); }}
                     className="w-full px-4 py-2 border rounded-lg bg-white text-gray-900"
                   >
                     {osceStationTypes.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
@@ -874,6 +997,51 @@ const AdminQuestionSubmission: React.FC = () => {
                 {getDefaultSections().map(section => (
                   <div key={section} className="border rounded-lg p-4 bg-white">
                     <div className="font-semibold mb-2">Section: {section}</div>
+                    
+                    {/* Section-level configuration */}
+                    <div className="mb-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Overall Section Mark</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="5"
+                            placeholder="1-5"
+                            value={osceSectionMarks[section]?.sectionMark || ''}
+                            onChange={e => updateSectionMark(section, Number(e.target.value))}
+                            className={getSectionMarkValidationClass(section)}
+                          />
+                          {(() => {
+                            const indicator = getRealTimeIndicator(section);
+                            return indicator.text ? (
+                              <div className={`text-xs mt-1 flex items-center gap-1 ${indicator.color}`}>
+                                <span>{indicator.icon}</span>
+                                <span>{indicator.text}</span>
+                              </div>
+                            ) : null;
+                          })()}
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Required Sub-sections for Full Mark <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            placeholder="Required (min 1)"
+                            value={osceSectionMarks[section]?.requiredSubSections || ''}
+                            onChange={e => updateRequiredSubSections(section, Number(e.target.value))}
+                            className="w-full px-2 py-1 border rounded"
+                            required
+                          />
+                          {osceErrors[`required_subsections_${section}`] && (
+                            <p className="text-red-500 text-xs mt-1">{osceErrors[`required_subsections_${section}`]}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
                     {(osceMarkItems[section] || []).map((item, idx) => (
                       <div key={idx} className="flex gap-2 mb-2">
                         <input
@@ -898,7 +1066,7 @@ const AdminQuestionSubmission: React.FC = () => {
                 ))}
                 {/* Custom sections */}
                 {osceCustomSections.map((section, sidx) => (
-                  <div key={sidx} className="border rounded-lg p-4 bg-white">
+                  <div key={sidx} className="border rounded-lg p-4 bg-white border-purple-300">
                     <div className="flex items-center mb-2">
                       <input
                         type="text"
@@ -909,6 +1077,51 @@ const AdminQuestionSubmission: React.FC = () => {
                       />
                       <button type="button" onClick={() => removeCustomSection(sidx)} className="text-red-500">Remove Section</button>
                     </div>
+                    
+                    {/* Section-level configuration for custom sections */}
+                    <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Overall Section Mark</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="5"
+                            placeholder="1-5"
+                            value={osceSectionMarks[section]?.sectionMark || ''}
+                            onChange={e => updateSectionMark(section, Number(e.target.value))}
+                            className={getSectionMarkValidationClass(section)}
+                          />
+                          {(() => {
+                            const indicator = getRealTimeIndicator(section);
+                            return indicator.text ? (
+                              <div className={`text-xs mt-1 flex items-center gap-1 ${indicator.color}`}>
+                                <span>{indicator.icon}</span>
+                                <span>{indicator.text}</span>
+                              </div>
+                            ) : null;
+                          })()}
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Required Sub-sections for Full Mark <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            placeholder="Required (min 1)"
+                            value={osceSectionMarks[section]?.requiredSubSections || ''}
+                            onChange={e => updateRequiredSubSections(section, Number(e.target.value))}
+                            className="w-full px-2 py-1 border rounded"
+                            required
+                          />
+                          {osceErrors[`required_subsections_${section}`] && (
+                            <p className="text-red-500 text-xs mt-1">{osceErrors[`required_subsections_${section}`]}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
                     {(osceMarkItems[section] || []).map((item, idx) => (
                       <div key={idx} className="flex gap-2 mb-2">
                         <input
@@ -931,7 +1144,7 @@ const AdminQuestionSubmission: React.FC = () => {
                     <button type="button" onClick={() => addMarkItem(section)} className="text-blue-600 text-sm">+ Add Marking Point</button>
                   </div>
                 ))}
-                <button type="button" onClick={addCustomSection} className="text-green-700 font-semibold">+ Add Custom Section</button>
+                <button type="button" onClick={addCustomSection} className="text-green-700 font-semibold">+ Add Extra Section</button>
               </div>
             </div>
             {/* OSCE Follow-up Questions */}

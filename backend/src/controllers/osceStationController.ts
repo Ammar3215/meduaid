@@ -8,14 +8,21 @@ const calculateTotalMarks = (markingScheme: any[], followUps: any[]): number => 
   // Calculate from marking scheme
   if (markingScheme && Array.isArray(markingScheme)) {
     markingScheme.forEach((section: any) => {
-      if (section.items && Array.isArray(section.items)) {
-        section.items.forEach((item: any) => {
-          const score = Number(item.score) || 0;
-          if (score < 0) {
-            throw new Error(`Invalid score: ${score}. Scores must be non-negative.`);
-          }
-          total += score;
-        });
+      // Add section mark if present
+      const sectionMark = Number(section.sectionMark) || 0;
+      if (sectionMark > 0) {
+        total += sectionMark;
+      } else {
+        // If no section mark, calculate from individual items
+        if (section.items && Array.isArray(section.items)) {
+          section.items.forEach((item: any) => {
+            const score = Number(item.score) || 0;
+            if (score < 0) {
+              throw new Error(`Invalid score: ${score}. Scores must be non-negative.`);
+            }
+            total += score;
+          });
+        }
       }
     });
   }
@@ -50,6 +57,36 @@ const validateScoringData = (markingScheme: any[], followUps: any[], totalMarks?
       if (!section.section || typeof section.section !== 'string') {
         throw new Error(`Section ${sectionIndex + 1} must have a valid name.`);
       }
+      
+      // Validate section mark if present
+      if (section.sectionMark !== undefined && section.sectionMark > 0) {
+        if (typeof section.sectionMark !== 'number' || section.sectionMark < 1 || section.sectionMark > 5) {
+          throw new Error(`Section "${section.section}" mark must be between 1-5 points.`);
+        }
+        
+        // Validate individual points don't exceed section mark
+        if (section.items && Array.isArray(section.items) && section.items.length > 0) {
+          const individualTotal = section.items.reduce((sum: number, item: any) => {
+            const score = Number(item.score) || 0;
+            return sum + score;
+          }, 0);
+          
+          if (individualTotal > section.sectionMark) {
+            throw new Error(`Section "${section.section}" individual points (${individualTotal}) exceed section mark (${section.sectionMark}).`);
+          }
+        }
+        
+        // Validate required sub-sections is provided when section mark is set
+        if (!section.requiredSubSections || section.requiredSubSections < 1) {
+          throw new Error(`Section "${section.section}" requires sub-sections count for full mark when section mark is provided.`);
+        }
+      }
+      
+      // Validate required sub-sections if present (for cases without section mark)
+      if (section.requiredSubSections !== undefined && (typeof section.requiredSubSections !== 'number' || section.requiredSubSections < 0)) {
+        throw new Error(`Section "${section.section}" must have a valid non-negative required sub-sections count.`);
+      }
+      
       // Allow empty sections initially - they can be filled later
       if (!section.items || !Array.isArray(section.items)) {
         throw new Error(`Section "${section.section}" must have an items array.`);
@@ -98,7 +135,7 @@ export const createOsceStation: RequestHandler = async (req, res) => {
     const user = (req as any).user;
     const {
       category, subject, topic, subtopic, title, type, caseDescription,
-      historySections, markingScheme, followUps, images, status, writer, totalMarks
+      historySections, customActorSections, markingScheme, followUps, images, status, writer, totalMarks
     } = req.body;
     
     // Validate scoring data
@@ -127,7 +164,7 @@ export const createOsceStation: RequestHandler = async (req, res) => {
     const osce = await OsceStation.create({
       writer: writerId,
       category, subject, topic, subtopic, title, type, caseDescription,
-      historySections, markingScheme, followUps: validatedFollowUps, images,
+      historySections, customActorSections, markingScheme, followUps: validatedFollowUps, images,
       totalMarks: calculatedTotalMarks,
       status: status || 'pending',
     });
@@ -250,7 +287,7 @@ export const updateOsceStation: RequestHandler = async (req, res) => {
     if (user?.role === 'admin' || (user?.role === 'writer' && station.writer.toString() === user.id)) {
       const fields = [
         'category', 'subject', 'topic', 'subtopic', 'title', 'type', 'caseDescription',
-        'historySections', 'markingScheme', 'images'
+        'historySections', 'customActorSections', 'markingScheme', 'images'
       ];
       for (const field of fields) {
         if (req.body[field] !== undefined) update[field] = req.body[field];

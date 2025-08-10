@@ -7,13 +7,15 @@ exports.authenticate = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const authenticate = (req, res, next) => {
     var _a;
-    // Try to get token from cookie first, then fallback to Authorization header for backward compatibility
-    let token = (_a = req.cookies) === null || _a === void 0 ? void 0 : _a.jwt;
+    // Try to get token from Authorization header first (primary method), then fallback to cookies
+    let token;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+    }
+    // Fallback to cookie if no Authorization header
     if (!token) {
-        const authHeader = req.headers.authorization;
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            token = authHeader.split(' ')[1];
-        }
+        token = (_a = req.cookies) === null || _a === void 0 ? void 0 : _a.jwt;
     }
     if (!token) {
         res.status(401).json({ message: 'No token provided' });

@@ -151,19 +151,43 @@ const OsceStationViewModal: React.FC<OsceStationViewModalProps> = (props) => {
                 </ul>
               </div>
             )}
+            {currentStation.customActorSections && currentStation.customActorSections.length > 0 && (
+              <div>
+                <span className="font-semibold">Custom Actor Sections:</span>
+                <ul className="list-disc ml-6">
+                  {currentStation.customActorSections.map((section: string, idx: number) => (
+                    <li key={idx} className="text-purple-700 font-medium">{section}</li>
+                  ))}
+                </ul>
+                <p className="text-xs text-purple-600 mt-1">Additional sections after Summary and Closure</p>
+              </div>
+            )}
             <div>
               <span className="font-semibold">Marking Scheme:</span>
               <div className="mt-2 space-y-4">
                 {currentStation.markingScheme?.map((section: any, idx: number) => {
                   const sectionTotal = section.items?.reduce((sum: number, item: any) => sum + (item.score || 0), 0) || 0;
+                  const hasSectionMark = section.sectionMark && section.sectionMark > 0;
                   return (
                     <div key={idx} className="bg-gray-50 rounded p-4 border">
                       <div className="flex justify-between items-center mb-2">
                         <h4 className="font-semibold text-gray-800">{section.section}</h4>
-                        <span className="inline-block px-2 py-1 rounded text-xs font-bold bg-blue-100 text-blue-700">
-                          {sectionTotal} point{sectionTotal !== 1 ? 's' : ''}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {hasSectionMark && (
+                            <span className="inline-block px-2 py-1 rounded text-xs font-bold bg-green-100 text-green-700">
+                              Section: {section.sectionMark} pts
+                            </span>
+                          )}
+                          <span className="inline-block px-2 py-1 rounded text-xs font-bold bg-blue-100 text-blue-700">
+                            {hasSectionMark ? `Individual: ${sectionTotal}` : `${sectionTotal} point${sectionTotal !== 1 ? 's' : ''}`}
+                          </span>
+                        </div>
                       </div>
+                      {section.requiredSubSections > 0 && (
+                        <div className="mb-2 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                          📝 Requires {section.requiredSubSections} sub-sections for full mark
+                        </div>
+                      )}
                       <ul className="space-y-1">
                         {section.items?.map((item: any, i: number) => (
                           <li key={i} className="flex justify-between items-center text-sm">

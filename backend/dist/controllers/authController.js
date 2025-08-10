@@ -72,12 +72,14 @@ exports.login = (0, errorHandler_1.asyncHandler)((req, res) => __awaiter(void 0,
     // Set httpOnly cookie instead of sending token in response body
     res.cookie('jwt', token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // HTTPS in production
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict', // Allow cross-origin in production
+        secure: true, // Always secure for cross-origin
+        sameSite: 'none', // Required for cross-origin cookies
+        domain: process.env.NODE_ENV === 'production' ? undefined : undefined, // Let browser handle domain
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
     });
     res.json({
         success: true,
+        token: token, // Return JWT token in response body
         user: {
             id: user._id,
             name: user.name,
@@ -269,8 +271,8 @@ exports.resetPassword = resetPassword;
 const logout = (req, res) => {
     res.clearCookie('jwt', {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+        secure: true, // Always secure for cross-origin
+        sameSite: 'none', // Required for cross-origin cookies
     });
     res.json({ message: 'Logged out successfully' });
 };

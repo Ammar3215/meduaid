@@ -10,8 +10,11 @@ export interface IOsceStation extends Document {
   type: 'history' | 'examination';
   caseDescription: string;
   historySections?: { [key: string]: string };
+  customActorSections?: string[]; // Custom sections after Summary & Closure
   markingScheme: {
     section: string;
+    sectionMark?: number; // Overall section mark
+    requiredSubSections?: number; // Minimum sub-sections needed for full marks
     items: { desc: string; score: number }[];
   }[];
   followUps: { question: string; answers: string[]; score: number }[];
@@ -33,9 +36,12 @@ const OsceStationSchema = new Schema<IOsceStation>({
   type: { type: String, enum: ['history', 'examination'], required: true },
   caseDescription: { type: String, required: true },
   historySections: { type: Schema.Types.Mixed },
+  customActorSections: { type: [String], default: [] }, // Custom sections after Summary & Closure
   markingScheme: [
     {
       section: { type: String, required: true },
+      sectionMark: { type: Number, default: 0 }, // Overall section mark
+      requiredSubSections: { type: Number, default: 0 }, // Minimum sub-sections needed
       items: [
         {
           desc: { type: String, required: true },
