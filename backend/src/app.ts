@@ -25,7 +25,9 @@ app.use(
       'http://localhost:5176',
       'http://localhost:5177',
       'http://localhost:1573',
-      'https://meduaid.vercel.app'
+      'https://meduaid.vercel.app',
+      'https://meduaid-portal.vercel.app',
+      'https://meduaid-frontend.vercel.app'
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     credentials: true,
