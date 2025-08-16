@@ -69,13 +69,14 @@ exports.login = (0, errorHandler_1.asyncHandler)((req, res) => __awaiter(void 0,
         throw new errorHandler_1.AppError('Invalid credentials', 400);
     }
     const token = jsonwebtoken_1.default.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    // Set httpOnly cookie instead of sending token in response body
+    // Set httpOnly cookie with improved compatibility
     res.cookie('jwt', token, {
         httpOnly: true,
-        secure: true, // Always secure for cross-origin
-        sameSite: 'none', // Required for cross-origin cookies
+        secure: process.env.NODE_ENV === 'production', // Only secure in production
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // More compatible sameSite setting
         domain: process.env.NODE_ENV === 'production' ? undefined : undefined, // Let browser handle domain
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+        path: '/', // Explicit path for better compatibility
     });
     res.json({
         success: true,
@@ -271,8 +272,9 @@ exports.resetPassword = resetPassword;
 const logout = (req, res) => {
     res.clearCookie('jwt', {
         httpOnly: true,
-        secure: true, // Always secure for cross-origin
-        sameSite: 'none', // Required for cross-origin cookies
+        secure: process.env.NODE_ENV === 'production', // Only secure in production
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Match login cookie settings
+        path: '/', // Explicit path for better compatibility
     });
     res.json({ message: 'Logged out successfully' });
 };

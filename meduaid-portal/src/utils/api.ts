@@ -18,6 +18,9 @@ const getAuthHeaders = () => {
 
 // Universal GET request
 export const apiGet = async (endpoint: string, options: RequestInit = {}) => {
+  const token = localStorage.getItem('auth_token');
+  console.log(`[API] GET ${endpoint} - Token present: ${!!token}, Token length: ${token?.length || 0}`);
+  
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     method: 'GET',
     headers: {
@@ -29,14 +32,25 @@ export const apiGet = async (endpoint: string, options: RequestInit = {}) => {
   });
   
   if (!response.ok) {
+    console.error(`[API] GET ${endpoint} failed - Status: ${response.status}, StatusText: ${response.statusText}`);
+    
+    if (response.status === 401) {
+      const errorBody = await response.text();
+      console.error(`[API] 401 Error details for ${endpoint}:`, errorBody);
+    }
+    
     throw new Error(`HTTP error! status: ${response.status}`);
   }
   
+  console.log(`[API] GET ${endpoint} successful - Status: ${response.status}`);
   return response.json();
 };
 
 // Universal POST request
 export const apiPost = async (endpoint: string, data?: any, options: RequestInit = {}) => {
+  const token = localStorage.getItem('auth_token');
+  console.log(`[API] POST ${endpoint} - Token present: ${!!token}, Token length: ${token?.length || 0}`);
+  
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     method: 'POST',
     headers: {
@@ -49,9 +63,17 @@ export const apiPost = async (endpoint: string, data?: any, options: RequestInit
   });
   
   if (!response.ok) {
+    console.error(`[API] POST ${endpoint} failed - Status: ${response.status}, StatusText: ${response.statusText}`);
+    
+    if (response.status === 401) {
+      const errorBody = await response.text();
+      console.error(`[API] 401 Error details for ${endpoint}:`, errorBody);
+    }
+    
     throw new Error(`HTTP error! status: ${response.status}`);
   }
   
+  console.log(`[API] POST ${endpoint} successful - Status: ${response.status}`);
   return response.json();
 };
 
